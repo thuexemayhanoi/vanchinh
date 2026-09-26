@@ -219,7 +219,8 @@ def build_cd():
             rows.append((f"cung đường {r} {p}", f"Cung đường {r} {p}: kinh nghiệm đi thực tế"))
     for r in ROUTES:
         for t in ["mùa khô", "mùa mưa"]:
-            rows.append((f"cung đường {r} mùa {t}", f"Cung đường {r} vào mùa {t}: kinh nghiệm thực tế"))
+            # t already contains "mùa"; avoid duplicated "mùa mùa" in keyword/title
+            rows.append((f"cung đường {r} {t}", f"Cung đường {r} vào {t}: kinh nghiệm thực tế"))
     for i in range(1, 40):
         rows.append((f"cung đường phượt Hà Nội phần {i}", f"Cung đường phượt từ Hà Nội - phần {i}"))
     for r in ROUTES[:12]:
