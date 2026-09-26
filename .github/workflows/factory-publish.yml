@@ -1,0 +1,91 @@
+name: Factory Publish (chunked)
+
+# Automated, deterministic publish pipeline. NO AI, NO API keys, NO secrets.
+# The external WRITER (Mistral run) commits article files under cam-nang/;
+# this workflow runs the canonical factory tooling:
+#   claim (chunk) -> scoped QA (quality + SEO score) -> grouped transactional
+#   publish (quality PASS AND SEO >= 90) -> full test suite -> single commit
+#   of derived state (matrix, hubs, sitemap, checkpoint, reports).
+# See docs/FACTORY-PUBLISH-WORKFLOW.md.
+on:
+  push:
+    branches: [main]
+    paths: ['cam-nang/**', '.github/workflows/factory-publish.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: factory-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Skip when the push adds no new article files
+        run: |
+          set -e
+          NEW_ARTICLES=$(git diff --name-only HEAD~1 HEAD -- cam-nang/ | wc -l)
+          echo "new article files in this push: $NEW_ARTICLES"
+          if [ "$NEW_ARTICLES" -eq 0 ]; then
+            echo "no new article files -> skip publish pipeline"
+            exit 78
+          fi
+      - name: Guard: no pending transaction, no lock
+        run: |
+          test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
+          test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }
+      - name: Determine chunk size (pilot 5, then 10)
+        id: chunk
+        run: |
+          set -e
+          PUBLISHED=$(python3 - <<'EOF'
+          import csv
+          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
+          print(sum(1 for r in rows if r['status'] == 'PUBLISHED'))
+          EOF
+          )
+          if [ "$PUBLISHED" -eq 0 ]; then LIMIT=5; else LIMIT=10; fi
+          echo "limit=$LIMIT" >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED -> chunk limit=$LIMIT"
+      - name: Claim chunk (deterministic, exactly N rows PLANNED->WRITING)
+        run: python3 scripts/run_article_batch.py claim B01 --limit ${{ steps.chunk.outputs.limit }}
+      - name: Scoped QA (quality score + SEO score of the current chunk)
+        run: python3 scripts/run_article_batch.py qa B01
+      - name: Grouped transactional publish (quality PASS AND SEO >= 90)
+        id: publish
+        continue-on-error: true
+        run: python3 scripts/run_article_batch.py publish B01
+      - name: Full test suite (pre-push gate)
+        run: python3 tests/run_tests.py
+      - name: Site validation (pre-push gate)
+        run: python3 scripts/validate_site.py
+      - name: Matrix validation (pre-push gate)
+        run: python3 scripts/validate_content_matrix.py
+      - name: Commit publish results (single commit per chunk)
+        run: |
+          git config user.name "vanchinh-factory-bot"
+          git config user.email "nguyentuantu2482@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no state changes to commit"
+          else
+            git commit -m "factory: B01 chunk publish (limit ${{ steps.chunk.outputs.limit }}) [automated txn]"
+            git push
+          fi
+      - name: Assert clean factory state
+        run: |
+          test ! -f data/batches/lock.json || { echo "lock left behind"; exit 1; }
+          test ! -f data/batches/txn/txn.json || { echo "txn marker left behind"; exit 1; }
+      - name: Report publish refusal if any
+        if: steps.publish.outcome == 'failure'
+        run: |
+          echo "publish refused (no eligible PASS rows or gate failure); state committed for review"
+          exit 1

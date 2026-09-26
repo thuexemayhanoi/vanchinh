@@ -89,16 +89,17 @@ def main():
     if wc < bands["fail_below"] or wc > bands["fail_above"]:
         critical.append(f"word count {wc} out of FAIL band")
 
-    editorial = [h for h in internal if h.endswith(".html") and h in
+    # basename-based classification (articles live under cam-nang/<folder>/)
+    editorial = [h for h in internal if h.endswith(".html") and h.rsplit("/", 1)[-1] in
                  ("kinhnghiem.html", "antoan.html", "xemay.html", "dulich.html", "cungduong.html", "hoidap.html")]
     if not (fc.RUBRIC["requirements"]["internal_editorial_links"]["min"] <= len(editorial)):
         errors.append(f"editorial internal links {len(editorial)} < min 3")
-    commercial = [h for h in internal if h in
+    commercial = [h for h in internal if h.rsplit("/", 1)[-1] in
                   [o["page"] for o in fc.OWNERSHIP["commercial_owners"]]]
     if len(commercial) > 1:
         critical.append(f"commercial links {len(commercial)} > 1")
     expected_target = row["commercial_link_target"]
-    bad_targets = [h for h in dict.fromkeys(commercial) if h != expected_target]
+    bad_targets = [h for h in dict.fromkeys(commercial) if h.rsplit("/", 1)[-1] != expected_target]
     if bad_targets:
         critical.append(f"commercial link target mismatch: {bad_targets} != {expected_target}")
 
