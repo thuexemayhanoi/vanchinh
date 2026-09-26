@@ -1,0 +1,31 @@
+name: Site Quality
+
+on:
+  push:
+    branches: [main]
+    paths: ['**.html', 'assets/**', 'robots.txt', 'sitemap.xml', 'config/**']
+  pull_request:
+    paths: ['**.html', 'assets/**', 'robots.txt', 'sitemap.xml', 'config/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Static site validation (links, canonical, hours, domain, H1)
+        run: python3 scripts/validate_site.py
+      - name: Business facts sanity
+        run: |
+          python3 - <<'EOF'
+          import json
+          f = json.load(open('config/business-facts.json'))
+          assert '09:00' in f['opening_hours'] and '17:00' in f['opening_hours'], f['opening_hours']
+          print('business-facts OK')
+          EOF

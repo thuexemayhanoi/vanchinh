@@ -1,0 +1,48 @@
+name: Article Quality
+
+on:
+  push:
+    branches: [main]
+    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**']
+  pull_request:
+    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Full test suite
+        run: python3 tests/run_tests.py
+      - name: Content matrix validation
+        run: python3 scripts/validate_content_matrix.py
+      - name: Node matrix fallback
+        run: node scripts/validate_content_matrix.mjs
+      - name: Cannibalization check
+        run: python3 scripts/check_cannibalization.py
+      - name: Validate all existing article files
+        run: |
+          set -e
+          python3 - <<'EOF'
+          import csv, subprocess, sys, pathlib, os
+          root = pathlib.Path('.')
+          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
+          fails = 0
+          for r in rows:
+              p = root / r['output_path']
+              if not p.exists():
+                  continue
+              res = subprocess.run([sys.executable, 'scripts/validate_article.py', r['article_id'], str(p)], capture_output=True, text=True)
+              print(r['article_id'], 'exit', res.returncode, res.stdout.strip()[:200])
+          print('article validation sweep done')
+          EOF

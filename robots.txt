@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /data/
+Disallow: /config/
+Disallow: /scripts/
+Disallow: /tools/
+Disallow: /tests/
+Disallow: /reports/
+Disallow: /sections/
+
+Sitemap: https://thuexemayhanoi.github.io/vanchinh/sitemap.xml

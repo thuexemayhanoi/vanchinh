@@ -1,0 +1,38 @@
+name: Article Batch (read-only dry-run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: 'Batch ID, e.g. B01'
+        required: true
+        default: 'B01'
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Matrix validation
+        run: python3 scripts/validate_content_matrix.py
+      - name: Batch plan (read-only)
+        run: python3 scripts/run_article_batch.py plan ${{ github.event.inputs.batch }}
+      - name: Progress snapshot (read-only)
+        run: python3 scripts/run_article_batch.py progress
+      - name: Node fallback checks
+        run: |
+          node scripts/validate_content_matrix.mjs
+          node scripts/run_article_batch.mjs plan ${{ github.event.inputs.batch }}
+      - name: Assert no pending transaction / lock
+        run: |
+          test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
+          test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }

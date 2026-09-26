@@ -1,0 +1,47 @@
+name: Factory Publish Verify (read-only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Full test suite
+        run: python3 tests/run_tests.py
+      - name: Site validation
+        run: python3 scripts/validate_site.py
+      - name: Matrix validation
+        run: python3 scripts/validate_content_matrix.py
+      - name: Cannibalization
+        run: python3 scripts/check_cannibalization.py
+      - name: Publish invariants (read-only)
+        run: |
+          set -e
+          python3 - <<'EOF'
+          import csv, pathlib
+          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
+          sitemap = open('sitemap.xml', encoding='utf-8').read()
+          pub = [r for r in rows if r['status'] == 'PUBLISHED']
+          missing = [r['article_id'] for r in pub if not (pathlib.Path(r['output_path'])).exists()]
+          assert not missing, f'published rows without file: {missing}'
+          not_in_sitemap = [r['article_id'] for r in pub if r['output_path'] not in sitemap]
+          assert not not_in_sitemap, f'published not in sitemap: {not_in_sitemap}'
+          bad = [r['article_id'] for r in rows if r['status'] in ('PLANNED','WRITING','QA','REVIEW','REPAIR','PASS') and r['output_path'] in sitemap]
+          assert not bad, f'non-published in sitemap: {bad}'
+          print(f'publish invariants OK: {len(pub)} published')
+          EOF
+      - name: Recovery tool available (no marker expected)
+        run: |
+          python3 scripts/run_article_batch.py recover
+          test ! -f data/batches/txn/txn.json || { echo "txn marker left behind"; exit 1; }
