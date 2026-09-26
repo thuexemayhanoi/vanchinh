@@ -3,9 +3,9 @@ name: Article Quality
 on:
   push:
     branches: [main]
-    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**']
+    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**', '.github/workflows/article-quality.yml']
   pull_request:
-    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**']
+    paths: ['data/content-matrix.csv', 'cam-nang/**', 'config/**', 'scripts/**', 'tests/**', '.github/workflows/article-quality.yml']
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
         run: |
           set -e
           python3 - <<'EOF'
-          import csv, subprocess, sys, pathlib, os
+          import csv, subprocess, sys, pathlib
           root = pathlib.Path('.')
           rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
           fails = 0
@@ -44,5 +44,8 @@ jobs:
                   continue
               res = subprocess.run([sys.executable, 'scripts/validate_article.py', r['article_id'], str(p)], capture_output=True, text=True)
               print(r['article_id'], 'exit', res.returncode, res.stdout.strip()[:200])
-          print('article validation sweep done')
+              if res.returncode != 0:
+                  fails += 1
+          print('article validation sweep done, failures:', fails)
+          sys.exit(1 if fails else 0)
           EOF

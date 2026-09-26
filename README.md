@@ -173,6 +173,7 @@ Run trước đòi 50 nhưng xong 30 → run sau HOÀN TẤT 30 còn lại TRƯ�
 
 - `site-quality.yml` — validate HTML/link/canonical khi push.
 - `article-quality.yml` — tests + matrix validation + article validator khi thay đổi matrix/article/config.
+- `article-quality.yml` sweep validator: bài viết hiện có fail validate → job FAIL (exit code != 0 được đếm).
 - `article-batch.yml` — workflow_dispatch, read-only dry-run (plan/progress).
 - `factory-publish-verify.yml` — workflow_dispatch, read-only publish dry-run verification.
 - Publish (`run_article_batch.py publish`) từ chối khi taxonomy vi phạm: category không hợp lệ, sai parent hub, sai mapping nhóm, hoặc menu/footer có link bài viết trực tiếp.
@@ -198,7 +199,7 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 Từ repo root:
 
 ```bash
-python3 tests/run_tests.py                 # full suite (≈986 checks)
+python3 tests/run_tests.py                 # full suite (>1.600 checks)
 python3 scripts/validate_site.py           # HTML/link/canonical/hours/domain
 python3 scripts/validate_content_matrix.py # matrix integrity
 node scripts/validate_content_matrix.mjs   # Node fallback
