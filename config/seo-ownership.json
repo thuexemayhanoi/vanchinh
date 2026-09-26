@@ -30,6 +30,11 @@
     {"page": "cungduong.html", "category": "CD"},
     {"page": "hoidap.html", "category": "HD"}
   ],
+  "navigation_groups": [
+    {"name": "Thuê xe & Hỏi đáp", "hubs": ["kinhnghiem.html", "hoidap.html"], "categories": ["KN", "HD"]},
+    {"name": "Xe máy & An toàn", "hubs": ["xemay.html", "antoan.html"], "categories": ["XM", "AT"]},
+    {"name": "Du lịch & Cung đường", "hubs": ["dulich.html", "cungduong.html"], "categories": ["DL", "CD"]}
+  ],
   "rules": [
     "Articles must NOT target any protected commercial keyword as their primary keyword.",
     "Do not create multiple near-identical doorway pages for one intent.",

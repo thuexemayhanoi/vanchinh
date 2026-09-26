@@ -5,6 +5,7 @@
 Includes: commercial pages, informational hubs, PUBLISHED articles only.
 Never PLANNED/WRITING/QA/REVIEW/REPAIR/PASS-but-not-published rows.
 """
+import re
 import sys
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -36,6 +37,16 @@ def main():
                 continue
             seen.add(loc)
             urls.append(f"  <url><loc>{loc}</loc></url>")
+    # paginated hub listing pages (exist only when a hub exceeds HUB_PAGE_SIZE)
+    for f in sorted(fc.ROOT.glob("*-trang-*.html")):
+        m = re.match(r"^(kinhnghiem|antoan|xemay|dulich|cungduong|hoidap)-trang-\d+\.html$", f.name)
+        if not m:
+            continue
+        loc = fc.BASE + f.name
+        if loc in seen:
+            continue
+        seen.add(loc)
+        urls.append(f"  <url><loc>{loc}</loc></url>")
     out = fc.ROOT / "sitemap.xml"
     out.write_text(TEMPLATE.format(urls="\n".join(urls)), encoding="utf-8")
     print(f"sitemap.xml urls={len(seen)}")

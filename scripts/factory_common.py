@@ -33,6 +33,49 @@ CATEGORIES = {"KN": "kinhnghiem.html", "AT": "antoan.html", "XM": "xemay.html",
               "DL": "dulich.html", "CD": "cungduong.html", "HD": "hoidap.html"}
 BASE = "https://thuexemayhanoi.github.io/vanchinh/"
 
+# --- Navigation taxonomy contract -------------------------------------------
+# UI exposes exactly 3 public "Cẩm nang" groups; the factory taxonomy keeps
+# 6 canonical categories. Groups live in config/seo-ownership.json
+# ("navigation_groups"); these helpers validate/derive from that config.
+HUB_PAGE_SIZE = 50  # deterministic pagination: max article links per hub page
+
+
+def nav_groups():
+    """Ordered [(group_name, [hub_page, ...])] from source-of-truth config."""
+    return [(g["name"], list(g["hubs"])) for g in OWNERSHIP["navigation_groups"]]
+
+
+def nav_group_categories():
+    """Ordered [(group_name, [category_code, ...])] from source-of-truth config."""
+    return [(g["name"], list(g["categories"])) for g in OWNERSHIP["navigation_groups"]]
+
+
+def validate_nav_taxonomy():
+    """Return list of taxonomy violations (empty list = valid)."""
+    problems = []
+    gs = OWNERSHIP.get("navigation_groups", [])
+    if len(gs) != 3:
+        problems.append(f"expected exactly 3 navigation groups, found {len(gs)}")
+    seen_hubs, seen_cats = [], []
+    for g in gs:
+        seen_hubs += g["hubs"]
+        seen_cats += g["categories"]
+        for hub, cat in zip(g["hubs"], g["categories"]):
+            if CATEGORIES.get(cat) != hub:
+                problems.append(f"group '{g['name']}': hub {hub} does not match category {cat}")
+    if sorted(seen_hubs) != sorted(set(seen_hubs)):
+        problems.append("a hub appears in more than one navigation group")
+    if sorted(seen_hubs) != sorted(CATEGORIES.values()):
+        problems.append("navigation groups do not cover exactly the 6 canonical hubs")
+    if sorted(seen_cats) != sorted(CATEGORIES.keys()):
+        problems.append("navigation groups do not cover exactly the 6 canonical categories")
+    return problems
+
+
+def listing_page(hub_id, page_number):
+    """Deterministic listing page path for hub pagination (page >= 2)."""
+    return f"{hub_id}-trang-{page_number}.html"
+
 MATRIX_FIELDS = ["article_id", "batch_id", "category", "status", "primary_keyword",
                  "secondary_keywords", "search_intent", "working_title", "slug", "output_path",
                  "parent_hub", "requires_sources", "source_policy", "internal_link_targets",

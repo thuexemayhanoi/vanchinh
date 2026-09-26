@@ -130,6 +130,23 @@ HUBS = [
     ("Cung Đường", "cungduong.html", "fas fa-route"),
     ("Hỏi Đáp", "hoidap.html", "fas fa-question"),
 ]
+# 6 canonical hubs grouped into exactly 3 public UI groups (taxonomy contract).
+# Groups are UI groupings only; the factory keeps 6 canonical categories.
+CAM_NANG_GROUPS = [
+    ("Thuê xe & Hỏi đáp", [
+        ("Kinh Nghiệm", "kinhnghiem.html", "fas fa-lightbulb"),
+        ("Hỏi Đáp", "hoidap.html", "fas fa-question"),
+    ]),
+    ("Xe máy & An toàn", [
+        ("Xe Máy", "xemay.html", "fas fa-motorcycle"),
+        ("An Toàn", "antoan.html", "fas fa-shield-halved"),
+    ]),
+    ("Du lịch & Cung đường", [
+        ("Du Lịch", "dulich.html", "fas fa-camera-retro"),
+        ("Cung Đường", "cungduong.html", "fas fa-route"),
+    ]),
+]
+assert {h for _, hs in CAM_NANG_GROUPS for _, h, _ in hs} == {h for _, h, _ in HUBS}
 SUPPORT = [
     ("Hỏi Đáp", "faq.html", "fas fa-question", "bg-gray-500"),
     ("Thủ Tục Thuê Xe", "thutuc.html", "fas fa-file-alt", "bg-teal-500"),
@@ -167,10 +184,37 @@ def _nav_group(title, items, icon, bg, summary_label):
     </ul>
 </details>'''
 
+
+def _nav_grouped(title, groups, icon, bg, summary_label):
+    """Sidebar group: one collapsible section exposing exactly 3 public
+    Cẩm nang groups; each group links only to its two canonical hubs."""
+    parts = []
+    for gname, items in groups:
+        parts.append(
+            f'<li class="pt-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{gname.replace("&", "&amp;")}</li>'
+        )
+        for label, href, ic in items:
+            parts.append(
+                f'<li><a href="{href}" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><i aria-hidden="true" class="{ic} text-gray-400"></i> {label}</a></li>'
+            )
+    lis = "\n".join(parts)
+    return f'''<details class="group">
+    <summary class="ios-item flex items-center px-4 py-3.5 text-gray-800 dark:text-white cursor-pointer">
+        <div class="w-8 h-8 rounded-lg {bg} flex items-center justify-center text-white mr-3 shadow-sm">
+            <i aria-hidden="true" class="{icon} text-sm"></i>
+        </div>
+        <span class="font-medium text-[15px] flex-1">{summary_label}</span>
+        <i aria-hidden="true" class="fas fa-chevron-down transition-transform duration-200 group-open:rotate-180 text-gray-400 text-xs"></i>
+    </summary>
+    <ul class="pl-14 pr-4 py-2 space-y-1.5 bg-gray-50/50 dark:bg-gray-800/50">
+        {lis}
+    </ul>
+</details>'''
+
 def sidebar():
     area_group = _nav_group("Khu Vực", AREAS, "fas fa-motorcycle", "bg-orange-500", "Chọn Khu Vực")
     duration_group = _nav_group("Hình Thức", DURATIONS, "fas fa-clock", "bg-teal-500", "Hình Thức Thuê")
-    hub_group = _nav_group("Cẩm Nang", HUBS, "fas fa-book-open", "bg-green-500", "Cẩm Nang")
+    hub_group = _nav_grouped("Cẩm Nang", CAM_NANG_GROUPS, "fas fa-book-open", "bg-green-500", "Cẩm Nang")
     support_items = "\n".join(_nav_item(l, h, i, b, arrow=False) for l, h, i, b in SUPPORT)
     main_items = "\n".join(
         _nav_item(l, h, i, b) for l, h, i, b in
@@ -278,9 +322,12 @@ def footer():
     </h4>
     <ul class="footer-content space-y-2 text-sm">{lis}</ul>
 </div>'''
-    hub_links = "".join(
-        f'<li><a href="{h}" class="hover:text-brand-400 transition-colors">Cẩm nang {t}</a></li>' for t, h, _ in HUBS
-    )
+    hub_links = ""
+    for gname, items in CAM_NANG_GROUPS:
+        hub_links += f'<li class="pt-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{gname.replace("&", "&amp;")}</li>'
+        hub_links += "".join(
+            f'<li><a href="{h}" class="hover:text-brand-400 transition-colors">Cẩm nang {t}</a></li>' for t, h, _ in items
+        )
     return f'''<footer class="bg-gray-900/95 text-gray-300 pt-16 pb-8 border-t border-gray-800 backdrop-blur-lg relative z-10">
     <div class="container mx-auto px-4">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">

@@ -43,6 +43,22 @@ Source of truth: `config/seo-ownership.json`.
 
 kinhnghiem.html (KN), antoan.html (AT), xemay.html (XM), dulich.html (DL), cungduong.html (CD), hoidap.html (HD). Hub chỉ liệt kê bài PUBLISHED; không dồn body bài vào hub.
 
+## Navigation taxonomy (3 nhóm UI / 6 category chuẩn)
+
+UI công khai (menu + footer) hiển thị đúng 3 nhóm "Cẩm Nang"; factory giữ nguyên 6 category chuẩn. Source of truth: `navigation_groups` trong `config/seo-ownership.json`.
+
+| Nhóm UI | Category | Hub |
+|---------|----------|-----|
+| Thuê xe & Hỏi đáp | KN, HD | kinhnghiem.html, hoidap.html |
+| Xe máy & An toàn | XM, AT | xemay.html, antoan.html |
+| Du lịch & Cung đường | DL, CD | dulich.html, cungduong.html |
+
+Quy tắc:
+
+- Menu/footer chỉ link tới hub/nhóm; không link bài viết riêng lẻ từ 2.000 bài vào nav/footer.
+- Một category thuộc đúng MỘT nhóm; một hub thuộc đúng MỘT nhóm; không chồng lấn sở hữu category.
+- Không thêm nhóm UI/category top-level mới không qua phê duyệt; các run scheduled phải bảo toàn mapping này (`validate_nav_taxonomy()` chặn vi phạm).
+
 ## Canonical
 
 - Mọi trang: canonical = `https://thuexemayhanoi.github.io/vanchinh/` + path thật. Unique toàn site, khớp path.

@@ -107,6 +107,18 @@ def cmd_publish(batch_id):
         print(json.dumps({"error": "refusing publish: PASS rows without files", "missing": missing}))
         fc.release_lock()
         return 1
+    # taxonomy contract gate (must pass BEFORE any mutation):
+    # each article in one valid category, correct parent hub, valid group mapping
+    problems = fc.validate_nav_taxonomy()
+    for r in to_publish:
+        if r["category"] not in fc.CATEGORIES:
+            problems.append(f"{r['article_id']}: invalid category {r['category']}")
+        if r["parent_hub"] != fc.CATEGORIES.get(r["category"]):
+            problems.append(f"{r['article_id']}: parent_hub {r['parent_hub']} != {fc.CATEGORIES.get(r['category'])}")
+    if problems:
+        print(json.dumps({"error": "refusing publish: taxonomy violations", "problems": problems[:20]}))
+        fc.release_lock()
+        return 1
     plan = {"articles": [{"article_id": r["article_id"], "output_path": r["output_path"],
                           "target_status": "PUBLISHED"} for r in to_publish],
             "updates": ["content-matrix", "hubs", "sitemap.xml", "reports"]}
@@ -116,7 +128,7 @@ def cmd_publish(batch_id):
         r["published_date"] = time.strftime("%Y-%m-%d", time.gmtime())
     fc.save_matrix(rows)
     run(["generate_sitemap.py"])  # regenerate sitemap (PUBLISHED only)
-    run(["generate_hub_lists.py"])  # regenerate hub article lists
+    run(["generate_hub_lists.py"])  # regenerate hub article lists (grouped, paginated)
     fc.write_progress()
     fc.finish_txn({"published": len(to_publish), "batch": batch_id})
     fc.release_lock()

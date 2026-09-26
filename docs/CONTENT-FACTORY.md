@@ -71,6 +71,18 @@ Marker `data/batches/txn/txn.json` ghi pre-state + planned writes. Trình tự: 
 
 `scripts/generate_hub_lists.py` đọc matrix, liệt kê bài PUBLISHED của category vào hub tương ứng. Không để hub list drift khỏi matrix; hỗ trợ pagination khi hub dài. Không dồn body hàng trăm bài vào hub.
 
+Quy tắc hub & phân trang (taxonomy contract):
+
+- Hub chỉ liệt kê bài PUBLISHED của đúng MỘT category, thứ tự deterministic (batch_id, article_id).
+- Mỗi trang hub tối đa `HUB_PAGE_SIZE = 50` link (`factory_common.HUB_PAGE_SIZE`).
+- Vượt 50 bài → sinh listing page `<hub>-trang-<n>.html` (root-level, dùng chung chrome site, canonical riêng, có trong sitemap); trang hub có pagination nav.
+- Bài bị rollback (recover) làm giảm số trang → listing page mồ côi bị XÓA tự động.
+- Menu/footer chỉ chứa 3 nhóm UI (xem `docs/SEO-OWNERSHIP.md`); KHÔNG đặt link bài viết riêng lẻ vào menu/footer.
+
+## Publish taxonomy gate
+
+`run_article_batch.py publish` kiểm TRƯỚC khi mutation: mỗi bài thuộc đúng MỘT category hợp lệ, parent hub đúng, mapping nhóm `navigation_groups` hợp lệ (`fc.validate_nav_taxonomy()`). Vi phạm → từ chối publish, không đổi matrix. Sau publish, hub + sitemap + reports được regenerate trong cùng transaction.
+
 ## Sitemap
 
 `scripts/generate_sitemap.py` chỉ thêm URL bài ở trạng thái PUBLISHED. Không URL PLANNED/WRITING/QA/REVIEW/REPAIR/PASS-chưa-publish/broken. Base: `https://thuexemayhanoi.github.io/vanchinh/`.

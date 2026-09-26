@@ -105,6 +105,58 @@ def main():
     if f"Sitemap: {BASE}sitemap.xml" not in rb:
         err("robots.txt sitemap reference missing/incorrect")
 
+    # --- navigation taxonomy contract ---------------------------------------
+    taxonomy = fc.validate_nav_taxonomy()
+    for t in taxonomy:
+        err(f"taxonomy: {t}")
+    groups = fc.nav_groups()  # exactly 3 [(name, [hub, hub])]
+    if len(groups) != 3:
+        err(f"expected exactly 3 public cẩm nang groups, found {len(groups)}")
+    for name, hubs in groups:
+        if len(hubs) != 2:
+            err(f"group '{name}' must expose exactly 2 canonical hubs")
+        for h in hubs:
+            if not (ROOT / h).exists():
+                err(f"group '{name}': missing canonical hub page {h}")
+    for hub in fc.CATEGORIES.values():
+        if not (ROOT / hub).exists():
+            err(f"missing canonical hub page {hub}")
+    for p in pages:
+        html = p.read_text(encoding="utf-8")
+        m_side = re.search(r'<aside id="sidebar-menu".*?</aside>', html, re.S)
+        m_foot = re.search(r"<footer.*?</footer>", html, re.S)
+        for region, tag in ((m_side, "sidebar"), (m_foot, "footer")):
+            if not region:
+                err(f"{p.name}: {tag} region missing")
+                continue
+            block = region.group(0)
+            for name, hubs in groups:
+                if name.replace("&", "&amp;") not in block:
+                    err(f"{p.name}: {tag} missing group label '{name}'")
+            # menu/footer must never link individual articles from the corpus
+            if 'href="cam-nang/' in block:
+                err(f"{p.name}: {tag} contains direct article links (only hub/group links allowed)")
+            for other in re.findall(r'href="([a-z]+-trang-\d+\.html)"', block):
+                err(f"{p.name}: {tag} links listing page {other} (not allowed in nav)")
+    # hub lists derive from Matrix truth (page 1 chunk per category)
+    for hub_id, cat in {"kinhnghiem": "KN", "antoan": "AT", "xemay": "XM",
+                        "dulich": "DL", "cungduong": "CD", "hoidap": "HD"}.items():
+        hp = ROOT / f"{hub_id}.html"
+        if not hp.exists():
+            continue
+        html = hp.read_text(encoding="utf-8")
+        m = re.search(r'<div id="hub-list-' + hub_id + r'"[^>]*>(.*?)</div>', html, re.S)
+        if not m:
+            err(f"{hub_id}.html: hub-list container missing")
+            continue
+        listed = {h for h in re.findall(r'href="([^"]+)"', m.group(1)) if h.startswith("cam-nang/")}
+        published = {r["output_path"] for r in fc.load_matrix()
+                      if r["category"] == cat and r["status"] == "PUBLISHED"}
+        page1 = set(sorted(published)[:fc.HUB_PAGE_SIZE])
+        if listed != page1:
+            err(f"{hub_id}.html: hub list drifts from Matrix truth "
+                f"(listed={len(listed)} expected={len(page1)})")
+
     for e in ERRORS:
         print("ERROR:", e)
     print(f"validate_site: pages={len(pages)} errors={len(ERRORS)}")

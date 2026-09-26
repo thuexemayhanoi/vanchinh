@@ -41,7 +41,7 @@ Quy tắc: KHÔNG bịa fact kinh doanh. Claim không xác minh được → g�
 Site tĩnh đa trang, sinh bằng `tools/build_pages.py` (chạy stdlib Python, không cần build framework):
 
 - 20 trang thương mại (index, gioithieu, banggia, lienhe, faq, 7 khu vực, xedien, 3 thời hạn thuê, thutuc, chinhsach, baomat, dieukhoan)
-- 6 hub thông tin: kinhnghiem, antoan, xemay, dulich, cungduong, hoidap
+- 6 hub thông tin: kinhnghiem, antoan, xemay, dulich, cungduong, hoidap — phân nhóm trong menu/footer thành đúng 3 nhóm "Cẩm Nang" (xem §7)
 - Chi tiết: `ARCHITECTURE.md`
 
 ## 5. Shared assets
@@ -56,7 +56,7 @@ Site tĩnh đa trang, sinh bằng `tools/build_pages.py` (chạy stdlib Python, 
 
 Mỗi trang thương mại sở hữu MỘT intent chính — xem `config/seo-ownership.json` và `docs/SEO-OWNERSHIP.md`. Bài viết thông tin KHÔNG được cannibalize intent thương mại được bảo vệ.
 
-## 7. Informational hub ownership
+## 7. Informational hub ownership & navigation taxonomy
 
 6 hub cố định, mỗi bài viết thuộc đúng MỘT category:
 
@@ -69,7 +69,26 @@ Mỗi trang thương mại sở hữu MỘT intent chính — xem `config/seo-ow
 | CD | cungduong.html | cam-nang/cung-duong/ |
 | HD | hoidap.html | cam-nang/hoi-dap/ |
 
-Không tự thêm category top-level mới.
+Taxonomy có HAI tầng, không được trộn lẫn:
+
+1. **UI navigation** (menu/footer): đúng 3 nhóm công khai "Cẩm Nang".
+2. **Factory taxonomy**: đúng 6 category chuẩn ở trên. KHÔNG thu gọn Matrix về 3 category — 3 nhóm UI chỉ là cách nhóm hiển thị.
+
+Mapping nhóm UI → category/hub (source of truth: `config/seo-ownership.json` → `navigation_groups`):
+
+| Nhóm UI | Category | Hub |
+|---------|----------|-----|
+| Thuê xe & Hỏi đáp | KN, HD | kinhnghiem.html, hoidap.html |
+| Xe máy & An toàn | XM, AT | xemay.html, antoan.html |
+| Du lịch & Cung đường | DL, CD | dulich.html, cungduong.html |
+
+Quy tắc taxonomy (bất diệt):
+
+- Menu/footer chỉ link tới hub/nhóm; KHÔNG BAO GIỜ đặt link bài viết riêng lẻ (từ 2.000 bài) vào main menu hoặc footer.
+- Hub list sinh từ Matrix theo trạng thái PUBLISHED (`scripts/generate_hub_lists.py`); hub không được drift khỏi Matrix.
+- Phân trang deterministic: mỗi trang hub hiển thị tối đa `HUB_PAGE_SIZE = 50` link; các trang tiếp theo là listing page `<hub>-trang-<n>.html` sinh tự nhiên và được dọn khi mồ côi; sitemap bao gồm listing page đang tồn tại.
+- Không tự thêm category top-level mới và không tự thêm nhóm UI mới — thay đổi taxonomy cần phê duyệt.
+- Mọi run scheduled trong tương lai PHẢI bảo toàn taxonomy này; `validate_nav_taxonomy()` (Python) và `validate_content_matrix.mjs` chặn vi phạm mapping.
 
 ## 8. Performance rules (bất diệt)
 
@@ -156,6 +175,7 @@ Run trước đòi 50 nhưng xong 30 → run sau HOÀN TẤT 30 còn lại TRƯ�
 - `article-quality.yml` — tests + matrix validation + article validator khi thay đổi matrix/article/config.
 - `article-batch.yml` — workflow_dispatch, read-only dry-run (plan/progress).
 - `factory-publish-verify.yml` — workflow_dispatch, read-only publish dry-run verification.
+- Publish (`run_article_batch.py publish`) từ chối khi taxonomy vi phạm: category không hợp lệ, sai parent hub, sai mapping nhóm, hoặc menu/footer có link bài viết trực tiếp.
 - KHÔNG cron cho AI writing. Scheduler ngoài (Mistral) lo phần đó. Actions luôn deterministic và an toàn.
 
 ## 21. Agent read order (mỗi content run)

@@ -198,6 +198,75 @@ def test_hub_generation():
     check("hub has no article links yet", 'href="cam-nang/' not in html)
 
 
+def test_taxonomy():
+    # exactly 6 canonical categories, exactly 3 public groups, valid mapping
+    check("exactly 6 canonical categories", len(fc.CATEGORIES) == 6)
+    groups = fc.nav_groups()
+    check("exactly 3 public groups", len(groups) == 3, str(len(groups)))
+    check("taxonomy config valid", not fc.validate_nav_taxonomy(), str(fc.validate_nav_taxonomy())[:200])
+    gmap = {n: tuple(c) for n, c in fc.nav_group_categories()}
+    check("group mapping KN/HD", gmap.get("Thuê xe & Hỏi đáp") == ("KN", "HD"))
+    check("group mapping XM/AT", gmap.get("Xe máy & An toàn") == ("XM", "AT"))
+    check("group mapping DL/CD", gmap.get("Du lịch & Cung đường") == ("DL", "CD"))
+    hubs_in_groups = sorted(h for _, hs in groups for h in hs)
+    check("groups cover exactly 6 hubs", hubs_in_groups == sorted(fc.CATEGORIES.values()))
+    # every matrix row: correct parent hub for its category
+    rows = fc.load_matrix()
+    check("all rows parent hub correct",
+          all(r["parent_hub"] == fc.CATEGORIES[r["category"]] for r in rows))
+    # menu/footer expose groups + hubs, never mass article links
+    for p in ROOT.glob("*.html"):
+        html = p.read_text(encoding="utf-8")
+        side = re.search(r'<aside id="sidebar-menu".*?</aside>', html, re.S)
+        foot = re.search(r"<footer.*?</footer>", html, re.S)
+        check(f"{p.name}: sidebar present", bool(side))
+        check(f"{p.name}: footer present", bool(foot))
+        for region, tag in ((side, "sidebar"), (foot, "footer")):
+            if not region:
+                continue
+            block = region.group(0)
+            for name, hubs in groups:
+                check(f"{p.name}: {tag} has group '{name}'", name.replace("&", "&amp;") in block)
+                for h in hubs:
+                    check(f"{p.name}: {tag} links hub {h}", f'href="{h}"' in block)
+            check(f"{p.name}: {tag} no direct article links", 'href="cam-nang/' not in block)
+            check(f"{p.name}: {tag} no listing-page links",
+                  not re.search(r'href="[a-z]+-trang-\d+\.html"', block))
+    # pagination: with >HUB_PAGE_SIZE published rows, extra listing pages appear
+    with tempfile.TemporaryDirectory() as td:
+        tm = pathlib.Path(td) / "m.csv"
+        rows = [dict(r) for r in fc.load_matrix()]
+        n = 0
+        for r in rows:
+            if r["category"] == "AT" and n < fc.HUB_PAGE_SIZE + 10:
+                r["status"] = "PUBLISHED"
+                n += 1
+        with tm.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        env = dict(os.environ, CONTENT_MATRIX=str(tm))
+        r = sh(sys.executable, "scripts/generate_hub_lists.py", env=env)
+        check("paginated hub gen exit 0", r.returncode == 0, r.stdout[-300:])
+        p2 = ROOT / fc.listing_page("antoan", 2)
+        check("listing page 2 created", p2.exists())
+        if p2.exists():
+            lp = p2.read_text(encoding="utf-8")
+            check("listing page 2 has 10 article links", lp.count('href="cam-nang/') == 10)
+            check("listing page 2 one h1", lp.count("<h1") == 1)
+            check("listing page 2 canonical ok", f'href="{fc.BASE}{p2.name}"' in lp)
+        hub_html = (ROOT / "antoan.html").read_text(encoding="utf-8")
+        check("hub page 1 shows 50 links", hub_html.count('href="cam-nang/') == fc.HUB_PAGE_SIZE)
+        check("hub page 1 links page 2", f'href="{p2.name}"' in hub_html)
+        # restore real state
+        r = sh(sys.executable, "scripts/generate_hub_lists.py")
+        check("hub regen after fixture exit 0", r.returncode == 0)
+        check("orphan listing page removed", not p2.exists())
+        hub_html = (ROOT / "antoan.html").read_text(encoding="utf-8")
+        check("hub restored empty state", "Chưa có bài viết" in hub_html)
+
+
+
 def main():
     t0 = time.time()
     test_facts()
@@ -208,6 +277,7 @@ def main():
     test_txn_and_lock()
     test_progress()
     test_hub_generation()
+    test_taxonomy()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")
     if FAIL:
         for f in FAIL[:40]:

@@ -13,6 +13,13 @@ Chạy từ repo root. Mọi mục critical phải PASS trước khi push.
 
 - [ ] `python3 scripts/validate_site.py` → errors=0 (26+ trang: 1 H1, title, description, canonical unique + khớp path, không broken local link/asset)
 
+## 2b. Navigation taxonomy
+
+- [ ] Đúng 3 nhóm UI "Cẩm Nang" trong sidebar + footer của MỌI trang; mapping KN/HD — XM/AT — DL/CD đúng
+- [ ] Menu/footer KHÔNG chứa link bài viết (`href="cam-nang/"`) hay link listing page
+- [ ] 6 hub chuẩn tồn tại; hub list khớp Matrix PUBLISHED; listing page `<hub>-trang-*.html` không mồ côi
+- [ ] Không category/hub top-level mới ngoài 6 category chuẩn
+
 ## 3. Factory
 
 - [ ] `python3 scripts/validate_content_matrix.py` → 2000 rows, 40×50, id/path unique, category hợp lệ

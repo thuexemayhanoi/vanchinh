@@ -12,7 +12,8 @@ GitHub Pages project site, thuần tĩnh, không backend/database/build framewor
 - **Thương mại**: gioithieu, banggia, lienhe, faq, thutuc, chinhsach, baomat, dieukhoan
 - **Khu vực**: longbien, gialam, hoankiem, phoco, badinh, tayho, haibatrung, xedien
 - **Thời hạn thuê**: thuengay, thuetuan, thuethang
-- **Hub thông tin**: kinhnghiem, antoan, xemay, dulich, cungduong, hoidap (mỗi hub liệt kê bài PUBLISHED của category đó, sinh bằng `scripts/generate_hub_lists.py`)
+- **Hub thông tin**: kinhnghiem, antoan, xemay, dulich, cungduong, hoidap (mỗi hub liệt kê bài PUBLISHED của category đó, sinh bằng `scripts/generate_hub_lists.py`; phân trang deterministic tối đa 50 link/trang, trang tiếp theo là listing page `<hub>-trang-<n>.html` sinh tự nhiên)
+- **Menu/footer**: mục "Cẩm Nang" hiển thị đúng 3 nhóm UI (Thuê xe & Hỏi đáp; Xe máy & An toàn; Du lịch & Cung đường), mỗi nhóm link tới 2 hub con. Không đặt link bài viết riêng lẻ vào menu/footer.
 
 Bài viết tương lai: file HTML riêng dưới `cam-nang/<folder-category>/<id>-<slug>.html`.
 

@@ -66,6 +66,9 @@ def main():
             errors.append(f"{r['article_id']}: repair_attempts {ra} > {fc.MAX_REPAIR}")
     if fc.txn_pending():
         warnings.append("pending transaction marker present - run recover before mutations")
+    problems = fc.validate_nav_taxonomy()
+    for e in problems:
+        print("ERROR taxonomy:", e)
     for e in errors:
         print("ERROR:", e)
     for w in warnings:

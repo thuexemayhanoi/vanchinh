@@ -8,6 +8,16 @@ const MATRIX = path.join(ROOT, 'data', 'content-matrix.csv');
 const EXPECTED = { KN: 350, AT: 300, XM: 350, DL: 400, CD: 300, HD: 300 };
 const STATES = new Set(['PLANNED', 'WRITING', 'QA', 'REVIEW', 'REPAIR', 'PASS', 'PUBLISHED', 'FAIL', 'BLOCKED']);
 const HUBS = { KN: 'kinhnghiem.html', AT: 'antoan.html', XM: 'xemay.html', DL: 'dulich.html', CD: 'cungduong.html', HD: 'hoidap.html' };
+// Navigation taxonomy contract: exactly 3 public groups over 6 canonical categories
+const NAV_GROUPS = [
+  { name: 'Thuê xe & Hỏi đáp', hubs: ['kinhnghiem.html', 'hoidap.html'], categories: ['KN', 'HD'] },
+  { name: 'Xe máy & An toàn', hubs: ['xemay.html', 'antoan.html'], categories: ['XM', 'AT'] },
+  { name: 'Du lịch & Cung đường', hubs: ['dulich.html', 'cungduong.html'], categories: ['DL', 'CD'] },
+];
+const allHubs = NAV_GROUPS.flatMap(g => g.hubs).sort().join(',');
+if (allHubs !== Object.values(HUBS).sort().join(',')) errors.push('nav groups do not cover exactly the 6 canonical hubs');
+const allCats = NAV_GROUPS.flatMap(g => g.categories).sort().join(',');
+if (allCats !== Object.keys(HUBS).sort().join(',')) errors.push('nav groups do not cover exactly the 6 canonical categories');
 
 function parseCSV(text) {
   const lines = text.split('\n');
