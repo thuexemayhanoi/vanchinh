@@ -26,6 +26,8 @@ jobs:
         run: python3 tests/run_tests.py
       - name: Content matrix validation
         run: python3 scripts/validate_content_matrix.py
+      - name: Matrix sync check (matrix must equal generator output)
+        run: python3 scripts/check_matrix_sync.py
       - name: Node matrix fallback
         run: node scripts/validate_content_matrix.mjs
       - name: Cannibalization check

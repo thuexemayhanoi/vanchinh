@@ -25,7 +25,7 @@ Hành vi: đọc marker → kiểm từng planned write: đã nhất quán → g
 
 ## Lock
 
-`data/batches/lock.json` (owner, pid, timestamp, batch). Trước mutation:
+`data/batches/lock.json` (operator, timestamp). Trước mutation:
 
 1. Kiểm remote HEAD (fetch fresh main).
 2. Kiểm pending txn → nếu có, recover trước.

@@ -8,6 +8,9 @@ const MATRIX = path.join(ROOT, 'data', 'content-matrix.csv');
 const EXPECTED = { KN: 350, AT: 300, XM: 350, DL: 400, CD: 300, HD: 300 };
 const STATES = new Set(['PLANNED', 'WRITING', 'QA', 'REVIEW', 'REPAIR', 'PASS', 'PUBLISHED', 'FAIL', 'BLOCKED']);
 const HUBS = { KN: 'kinhnghiem.html', AT: 'antoan.html', XM: 'xemay.html', DL: 'dulich.html', CD: 'cungduong.html', HD: 'hoidap.html' };
+const errors = [];
+const OWNERSHIP = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'seo-ownership.json'), 'utf-8'));
+const TARGETS = OWNERSHIP.article_commercial_targets || {};
 // Navigation taxonomy contract: exactly 3 public groups over 6 canonical categories
 const NAV_GROUPS = [
   { name: 'Thuê xe & Hỏi đáp', hubs: ['kinhnghiem.html', 'hoidap.html'], categories: ['KN', 'HD'] },
@@ -37,7 +40,6 @@ function parseCSV(text) {
   });
 }
 
-const errors = [];
 const rows = parseCSV(fs.readFileSync(MATRIX, 'utf-8'));
 if (rows.length !== 2000) errors.push(`row count ${rows.length} != 2000`);
 const ids = new Set(), paths = new Set(), cats = {}, batches = {};
@@ -49,6 +51,7 @@ for (const r of rows) {
   cats[r.category] = (cats[r.category] || 0) + 1;
   if (!STATES.has(r.status)) errors.push(`${r.article_id}: bad status ${r.status}`);
   if (r.parent_hub !== HUBS[r.category]) errors.push(`${r.article_id}: bad parent_hub`);
+  if (TARGETS[r.category] !== r.commercial_link_target) errors.push(`${r.article_id}: bad commercial_link_target ${r.commercial_link_target} (expected ${TARGETS[r.category]})`);
   if (!r.output_path.startsWith('cam-nang/')) errors.push(`${r.article_id}: path not under cam-nang/`);
   batches[r.batch_id] = (batches[r.batch_id] || 0) + 1;
 }

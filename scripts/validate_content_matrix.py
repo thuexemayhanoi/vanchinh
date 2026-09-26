@@ -14,6 +14,9 @@ EXPECTED_BATCHES = 40
 def main():
     errors, warnings = [], []
     rows = fc.load_matrix()
+    comm_targets = fc.OWNERSHIP.get("article_commercial_targets", {})
+    if set(comm_targets) != set(fc.CATEGORIES):
+        errors.append("config article_commercial_targets missing or not covering all categories")
     if len(rows) != 2000:
         errors.append(f"row count {len(rows)} != 2000")
     ids = [r["article_id"] for r in rows]
@@ -54,8 +57,8 @@ def main():
             errors.append(f"{r['article_id']}: slug/output_path mismatch")
         if r["requires_sources"] == "true" and r["source_policy"] != "OFFICIAL_VN_PRIMARY":
             errors.append(f"{r['article_id']}: requires_sources=true but source_policy={r['source_policy']}")
-        if r["commercial_link_target"] not in ("thuengay.html", "banggia.html", "chinhsach.html", "faq.html"):
-            errors.append(f"{r['article_id']}: bad commercial_link_target {r['commercial_link_target']}")
+        if r["commercial_link_target"] != comm_targets.get(r["category"]):
+            errors.append(f"{r['article_id']}: bad commercial_link_target {r['commercial_link_target']} (expected {comm_targets.get(r['category'])})")
         if r["repair_attempts"].strip() and not r["repair_attempts"].isdigit():
             errors.append(f"{r['article_id']}: repair_attempts not numeric")
         try:

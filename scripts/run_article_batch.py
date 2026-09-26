@@ -21,13 +21,15 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import factory_common as fc
 
+SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
+
 
 def batch_rows(rows, batch_id):
     return [r for r in rows if r["batch_id"] == batch_id]
 
 
 def run(cmd):
-    return subprocess.run([sys.executable] + cmd, capture_output=True, text=True)
+    return subprocess.run([sys.executable, str(SCRIPTS_DIR / cmd[0])] + cmd[1:], capture_output=True, text=True)
 
 
 def cmd_plan(batch_id):
@@ -127,8 +129,28 @@ def cmd_publish(batch_id):
         r["status"] = "PUBLISHED"
         r["published_date"] = time.strftime("%Y-%m-%d", time.gmtime())
     fc.save_matrix(rows)
-    run(["generate_sitemap.py"])  # regenerate sitemap (PUBLISHED only)
-    run(["generate_hub_lists.py"])  # regenerate hub article lists (grouped, paginated)
+    r_sitemap = run(["generate_sitemap.py"])  # regenerate sitemap (PUBLISHED only)
+    r_hubs = run(["generate_hub_lists.py"])  # regenerate hub article lists (grouped, paginated)
+    if r_sitemap.returncode != 0 or r_hubs.returncode != 0:
+        # rollback rows, then regenerate sitemap/hubs from the rolled-back matrix
+        for r in to_publish:
+            r["status"] = "PASS"
+            r["published_date"] = ""
+        fc.save_matrix(rows)
+        rr_sitemap = run(["generate_sitemap.py"])
+        rr_hubs = run(["generate_hub_lists.py"])
+        fc.write_progress()
+        if rr_sitemap.returncode == 0 and rr_hubs.returncode == 0:
+            fc.TXN.unlink()
+            fc.release_lock()
+            print(json.dumps({"error": "publish rolled back: sitemap/hub regeneration failed",
+                              "batch": batch_id,
+                              "sitemap_rc": r_sitemap.returncode, "hubs_rc": r_hubs.returncode}))
+            return 1
+        # rollback regeneration also failed: keep txn marker for recover
+        fc.release_lock()
+        print(json.dumps({"error": "publish rollback incomplete: run recover", "batch": batch_id}))
+        return 1
     fc.write_progress()
     fc.finish_txn({"published": len(to_publish), "batch": batch_id})
     fc.release_lock()

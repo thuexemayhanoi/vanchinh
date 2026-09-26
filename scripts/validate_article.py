@@ -78,6 +78,8 @@ def main():
         errors.append("BreadcrumbList missing")
     if 'rel="author"' not in html and "author" not in html.lower():
         errors.append("author metadata missing")
+    art_dir = path.resolve().parent
+    internal = local_targets(html)
     hub_ok = any(str((art_dir / h).resolve()).endswith(row["parent_hub"]) for h in internal)
     if not hub_ok:
         critical.append("parent hub link missing")
@@ -87,8 +89,6 @@ def main():
     if wc < bands["fail_below"] or wc > bands["fail_above"]:
         critical.append(f"word count {wc} out of FAIL band")
 
-    art_dir = path.resolve().parent
-    internal = local_targets(html)
     editorial = [h for h in internal if h.endswith(".html") and h in
                  ("kinhnghiem.html", "antoan.html", "xemay.html", "dulich.html", "cungduong.html", "hoidap.html")]
     if not (fc.RUBRIC["requirements"]["internal_editorial_links"]["min"] <= len(editorial)):
@@ -97,6 +97,10 @@ def main():
                   [o["page"] for o in fc.OWNERSHIP["commercial_owners"]]]
     if len(commercial) > 1:
         critical.append(f"commercial links {len(commercial)} > 1")
+    expected_target = row["commercial_link_target"]
+    bad_targets = [h for h in dict.fromkeys(commercial) if h != expected_target]
+    if bad_targets:
+        critical.append(f"commercial link target mismatch: {bad_targets} != {expected_target}")
 
     for claim in fc.RUBRIC["forbidden_unsupported_claims"]:
         if claim.lower() in html.lower():

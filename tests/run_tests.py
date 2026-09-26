@@ -98,6 +98,10 @@ def test_matrix():
     check("REVIEW->BLOCKED", fc.valid_transition("REVIEW", "BLOCKED"))
     check("AT requires sources", all(r["requires_sources"] == "true" for r in rows if r["category"] == "AT"))
     check("HD requires sources", all(r["requires_sources"] == "true" for r in rows if r["category"] == "HD"))
+    targets = fc.OWNERSHIP.get("article_commercial_targets", {})
+    check("commercial targets config covers all categories", set(targets) == set(fc.CATEGORIES))
+    check("all rows commercial target correct",
+          all(r["commercial_link_target"] == targets[r["category"]] for r in rows))
 
 
 def test_scripts():
@@ -140,7 +144,9 @@ def test_fixture_qa():
         r = sh(sys.executable, "scripts/validate_article.py", "KN-9999", "tests/fixtures/sample-article.html", env=env)
         out = r.stdout
         check("fixture validate_article runs", r.returncode in (0, 1))
-        check("fixture duplicate paragraph caught", "duplicated paragraph" in out or "trùng" in out or True)
+        check("fixture validate_article no crash", "Traceback" not in (r.stderr or ""))
+        check("fixture validate_article output is json",
+              out.strip().startswith("{") and '"article_id"' in out)
         r2 = sh(sys.executable, "scripts/score_article.py", "KN-9999", env=env)
         try:
             res = json.loads(r2.stdout)
@@ -151,34 +157,51 @@ def test_fixture_qa():
 
 
 def test_txn_and_lock():
-    # lock: second acquire must fail
-    fc.acquire_lock(operator="test")
-    try:
-        fc.acquire_lock(operator="test2")
-        check("second lock refused", False)
-    except fc.LockHeld:
-        check("second lock refused", True)
-    fc.release_lock()
-    check("lock released", not fc.LOCK.exists())
-    # txn: begin twice refused
-    fc.begin_txn({"articles": [{"article_id": "AT-0001", "output_path": "cam-nang/an-toan/nonexistent.html",
-                                "target_status": "PUBLISHED"}]})
-    check("pending txn detected", fc.txn_pending())
-    try:
-        fc.begin_txn({})
-        check("second txn refused", False)
-    except RuntimeError:
-        check("second txn refused", True)
-    fc.recover_txn()
-    check("recover clears marker", not fc.txn_pending())
-    # after recovery, AT-0001 (file missing) should be WRITING again
-    rows = fc.load_matrix()
-    at1 = [r for r in rows if r["article_id"] == "AT-0001"][0]
-    check("recovered unwritten article not published", at1["status"] in ("PLANNED", "WRITING"))
-    # restore matrix determinism: regenerate
-    sh(sys.executable, "tools/generate_content_matrix.py")
-    rows = fc.load_matrix()
-    check("matrix regenerated identical", len(rows) == 2000 and all(r["status"] == "PLANNED" for r in rows))
+    # lock path contract (README / docs/RECOVERY.md): data/batches/lock.json
+    check("lock path contract", fc.LOCK == ROOT / "data" / "batches" / "lock.json")
+    # txn recovery must NEVER mutate the production matrix: run on a temp copy
+    orig_matrix = fc.MATRIX
+    before_bytes = orig_matrix.read_bytes()
+    with tempfile.TemporaryDirectory() as td:
+        tm = pathlib.Path(td) / "m.csv"
+        rows = [dict(r) for r in fc.load_matrix()]
+        for r in rows:
+            if r["article_id"] == "AT-0001":
+                r["status"] = "PASS"
+        with tm.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        fc.MATRIX = tm
+        try:
+            # lock: second acquire must fail
+            fc.acquire_lock(operator="test")
+            try:
+                fc.acquire_lock(operator="test2")
+                check("second lock refused", False)
+            except fc.LockHeld:
+                check("second lock refused", True)
+            fc.release_lock()
+            check("lock released", not fc.LOCK.exists())
+            # txn: begin twice refused
+            fc.begin_txn({"articles": [{"article_id": "AT-0001", "output_path": "cam-nang/an-toan/nonexistent.html",
+                                        "target_status": "PUBLISHED"}]})
+            check("pending txn detected", fc.txn_pending())
+            try:
+                fc.begin_txn({})
+                check("second txn refused", False)
+            except RuntimeError:
+                check("second txn refused", True)
+            fc.recover_txn()
+            check("recover clears marker", not fc.txn_pending())
+            # after recovery, AT-0001 (file missing) must not stay PUBLISHED
+            rows = fc.load_matrix()
+            at1 = [r for r in rows if r["article_id"] == "AT-0001"][0]
+            check("recovered unwritten article not published", at1["status"] in ("PLANNED", "WRITING", "PASS"))
+        finally:
+            fc.release_lock()
+            fc.MATRIX = orig_matrix
+    check("production matrix untouched by txn test", orig_matrix.read_bytes() == before_bytes)
 
 
 def test_progress():

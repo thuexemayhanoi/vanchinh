@@ -30,6 +30,14 @@
     {"page": "cungduong.html", "category": "CD"},
     {"page": "hoidap.html", "category": "HD"}
   ],
+  "article_commercial_targets": {
+    "KN": "index.html",
+    "XM": "index.html",
+    "AT": "banggia.html",
+    "DL": "thuengay.html",
+    "CD": "thuethang.html",
+    "HD": "lienhe.html"
+  },
   "navigation_groups": [
     {"name": "Thuê xe & Hỏi đáp", "hubs": ["kinhnghiem.html", "hoidap.html"], "categories": ["KN", "HD"]},
     {"name": "Xe máy & An toàn", "hubs": ["xemay.html", "antoan.html"], "categories": ["XM", "AT"]},

@@ -13,7 +13,7 @@ FACTS = json.loads((ROOT / "config" / "business-facts.json").read_text(encoding=
 RUBRIC = json.loads((ROOT / "config" / "article-rubric.json").read_text(encoding="utf-8"))
 OWNERSHIP = json.loads((ROOT / "config" / "seo-ownership.json").read_text(encoding="utf-8"))
 PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
-LOCK = ROOT / "data" / "batches" / "txn" / "run.lock"
+LOCK = ROOT / "data" / "batches" / "lock.json"
 TXN = ROOT / "data" / "batches" / "txn" / "txn.json"
 
 STATES = ["PLANNED", "WRITING", "QA", "REVIEW", "REPAIR", "PASS", "PUBLISHED", "FAIL", "BLOCKED"]
@@ -113,7 +113,7 @@ def acquire_lock(operator="operator", max_age_hours=6):
         except Exception:
             pass
         if age_h < max_age_hours:
-            raise LockHeld(f"run.lock held by {data.get('operator', '?')} age={age_h:.2f}h; "
+            raise LockHeld(f"lock.json held by {data.get('operator', '?')} age={age_h:.2f}h; "
                            f"refuse mutations. Stale recovery: verify owner then delete {LOCK} (explicit, audited).")
         # stale lock: require explicit flag
         if os.environ.get("FORCE_STALE_LOCK_RECOVERY") != "1":

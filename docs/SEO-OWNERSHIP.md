@@ -6,7 +6,7 @@ Source of truth: `config/seo-ownership.json`.
 
 1. Mỗi trang thương mại sở hữu MỘT primary intent. Không tạo doorway page gần-trùng.
 2. Bài viết thông tin KHÔNG được nhắm primary_keyword trùng intent được bảo vệ (`check_cannibalization.py` chặn).
-3. Bài viết tối đa 1 link thương mại, đến đúng `commercial_link_target` của category:
+3. Bài viết tối đa 1 link thương mại, đến đúng `commercial_link_target` của category (source of truth: `article_commercial_targets` trong `config/seo-ownership.json`):
    - KN, XM → index.html
    - AT → banggia.html
    - DL → thuengay.html

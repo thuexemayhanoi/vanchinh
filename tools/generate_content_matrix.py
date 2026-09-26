@@ -11,6 +11,7 @@ Rows are PLANNED only; no article bodies are written by this tool.
 Deterministic: same input -> byte-identical CSV (sorted, stable ids).
 """
 import csv
+import json
 import pathlib
 import sys
 
@@ -27,8 +28,11 @@ CATEGORIES = {
 }
 CAT_FOLDER = {"KN": "kinh-nghiem", "AT": "an-toan", "XM": "xe-may",
               "DL": "du-lich", "CD": "cung-duong", "HD": "hoi-dap"}
-COMMERCIAL = {"KN": "thuengay.html", "AT": "chinhsach.html", "XM": "banggia.html",
-              "DL": "thuengay.html", "CD": "thuengay.html", "HD": "faq.html"}
+# Source of truth for per-category commercial targets: config/seo-ownership.json
+# (docs/SEO-OWNERSHIP.md rule 3); keep code and matrix in lockstep with the docs.
+OWNERSHIP = json.loads((ROOT / "config" / "seo-ownership.json").read_text(encoding="utf-8"))
+COMMERCIAL = OWNERSHIP["article_commercial_targets"]
+assert set(COMMERCIAL) == set(CATEGORIES), "article_commercial_targets must cover all categories"
 INTENTS = {"KN": "informational", "AT": "informational", "XM": "informational",
            "DL": "informational", "CD": "informational", "HD": "informational"}
 REQUIRES_SOURCES = {"AT": True, "HD": True}  # legal/safety categories need primary sources

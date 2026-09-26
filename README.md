@@ -157,7 +157,7 @@ Publish cập nhật nhiều file (article, matrix, hubs, sitemap, reports). Coi
 
 ## 18. Lock/concurrency rules
 
-Run-lock tại `data/batches/lock.json` (PID, timestamp, batch). Operator phải kiểm: remote HEAD, pending txn, active lock, active batch. Hai operator không được ghi/publish row chồng lấp. Stale lock chỉ được thu hồi khi expired, qua `FORCE_STALE_LOCK_RECOVERY=1`, và có ghi chú kiểm chứng rõ ràng.
+Run-lock tại `data/batches/lock.json` (operator, timestamp). Operator phải kiểm: remote HEAD, pending txn, active lock, active batch. Hai operator không được ghi/publish row chồng lấp. Stale lock chỉ được thu hồi khi expired, qua `FORCE_STALE_LOCK_RECOVERY=1`, và có ghi chú kiểm chứng rõ ràng.
 
 ## 19. Resume behavior (bắt buộc)
 
