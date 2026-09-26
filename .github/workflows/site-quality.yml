@@ -3,7 +3,7 @@ name: Site Quality
 on:
   push:
     branches: [main]
-    paths: ['**.html', 'assets/**', 'robots.txt', 'sitemap.xml', 'config/**']
+    paths: ['**.html', 'assets/**', 'robots.txt', 'sitemap.xml', 'config/**', '.github/workflows/site-quality.yml']
   pull_request:
     paths: ['**.html', 'assets/**', 'robots.txt', 'sitemap.xml', 'config/**']
   workflow_dispatch:
