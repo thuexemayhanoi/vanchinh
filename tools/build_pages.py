@@ -130,23 +130,29 @@ HUBS = [
     ("Cung Đường", "cungduong.html", "fas fa-route"),
     ("Hỏi Đáp", "hoidap.html", "fas fa-question"),
 ]
+_HUB_BY_PAGE = {h: (label, h, icon) for label, h, icon in HUBS}
+
+
+def _nav_groups_from_config():
+    """Derive the 3 public UI groups deterministically from the source-of-truth
+    config (config/seo-ownership.json -> navigation_groups).
+    Presentation (labels/icons) lives here; group/category ownership remains
+    owned by the config file. Fails hard if config violates the taxonomy
+    contract (exactly 3 groups covering exactly the 6 canonical hubs)."""
+    ownership = json.loads((ROOT / "config" / "seo-ownership.json").read_text(encoding="utf-8"))
+    groups = []
+    for g in ownership["navigation_groups"]:
+        items = [_HUB_BY_PAGE[h] for h in g["hubs"]]
+        groups.append((g["name"], items))
+    covered = {h for _, items in groups for _, h, _ in items}
+    assert covered == {h for _, h, _ in HUBS}, "navigation_groups do not cover the 6 canonical hubs"
+    assert len(groups) == 3, "navigation_groups must be exactly 3 public groups"
+    return groups
+
+
 # 6 canonical hubs grouped into exactly 3 public UI groups (taxonomy contract).
 # Groups are UI groupings only; the factory keeps 6 canonical categories.
-CAM_NANG_GROUPS = [
-    ("Thuê xe & Hỏi đáp", [
-        ("Kinh Nghiệm", "kinhnghiem.html", "fas fa-lightbulb"),
-        ("Hỏi Đáp", "hoidap.html", "fas fa-question"),
-    ]),
-    ("Xe máy & An toàn", [
-        ("Xe Máy", "xemay.html", "fas fa-motorcycle"),
-        ("An Toàn", "antoan.html", "fas fa-shield-halved"),
-    ]),
-    ("Du lịch & Cung đường", [
-        ("Du Lịch", "dulich.html", "fas fa-camera-retro"),
-        ("Cung Đường", "cungduong.html", "fas fa-route"),
-    ]),
-]
-assert {h for _, hs in CAM_NANG_GROUPS for _, h, _ in hs} == {h for _, h, _ in HUBS}
+CAM_NANG_GROUPS = _nav_groups_from_config()
 SUPPORT = [
     ("Hỏi Đáp", "faq.html", "fas fa-question", "bg-gray-500"),
     ("Thủ Tục Thuê Xe", "thutuc.html", "fas fa-file-alt", "bg-teal-500"),
@@ -186,30 +192,52 @@ def _nav_group(title, items, icon, bg, summary_label):
 
 
 def _nav_grouped(title, groups, icon, bg, summary_label):
-    """Sidebar group: one collapsible section exposing exactly 3 public
-    Cẩm nang groups; each group links only to its two canonical hubs."""
+    """Sidebar: one accordion per public parent group; each parent expands to
+    its two canonical hub links (mobile/mobile-drawer semantics)."""
     parts = []
     for gname, items in groups:
-        parts.append(
-            f'<li class="pt-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{gname.replace("&", "&amp;")}</li>'
+        lis = "\n".join(
+            f'<li><a href="{href}" class="flex items-center gap-2 py-1.5 text-sm text-gray-600 dark:text-gray-300"><i aria-hidden="true" class="{ic} text-gray-400"></i> {label}</a></li>'
+            for label, href, ic in items
         )
-        for label, href, ic in items:
-            parts.append(
-                f'<li><a href="{href}" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><i aria-hidden="true" class="{ic} text-gray-400"></i> {label}</a></li>'
-            )
-    lis = "\n".join(parts)
-    return f'''<details class="group">
-    <summary class="ios-item flex items-center px-4 py-3.5 text-gray-800 dark:text-white cursor-pointer">
+        gid = "nav-group-" + re.sub(r"[^a-z0-9]+", "-", gname.lower()).strip("-")
+        parts.append(f'''<details class="group nav-accordion" id="{gid}-details">
+    <summary class="ios-item flex items-center px-4 py-3.5 text-gray-800 dark:text-white cursor-pointer rounded-2xl" aria-expanded="false" aria-controls="{gid}-panel">
         <div class="w-8 h-8 rounded-lg {bg} flex items-center justify-center text-white mr-3 shadow-sm">
             <i aria-hidden="true" class="{icon} text-sm"></i>
         </div>
-        <span class="font-medium text-[15px] flex-1">{summary_label}</span>
+        <span class="font-medium text-[15px] flex-1">{gname.replace("&", "&amp;")}</span>
         <i aria-hidden="true" class="fas fa-chevron-down transition-transform duration-200 group-open:rotate-180 text-gray-400 text-xs"></i>
     </summary>
-    <ul class="pl-14 pr-4 py-2 space-y-1.5 bg-gray-50/50 dark:bg-gray-800/50">
+    <ul id="{gid}-panel" class="pl-14 pr-4 py-2 space-y-1.5 bg-gray-50/50 dark:bg-gray-800/50">
         {lis}
     </ul>
-</details>'''
+</details>''')
+    return "\n".join(parts)
+
+
+def desktop_nav():
+    """Desktop parent/child dropdown navigation (lg+).
+    Exactly 3 parents, each opening a small dropdown of its 2 canonical hubs.
+    Opened by hover (pointer:fine), keyboard/focus and click (main.js)."""
+    items = []
+    for idx, (gname, hubs) in enumerate(CAM_NANG_GROUPS):
+        gid = "dnav-" + re.sub(r"[^a-z0-9]+", "-", gname.lower()).strip("-")
+        links = "\n".join(
+            f'<li><a href="{href}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50/60 dark:hover:bg-gray-700/60 transition-colors"><i aria-hidden="true" class="{ic} text-gray-400 text-xs w-4"></i> {label}</a></li>'
+            for label, href, ic in hubs
+        )
+        items.append(f'''<div class="nav-dropdown relative" data-nav-dropdown>
+    <button type="button" id="{gid}-btn" class="nav-drop-btn flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-white/60 dark:hover:bg-gray-800/60 transition-colors" aria-expanded="false" aria-controls="{gid}-panel" aria-haspopup="true">
+        <span>{gname.replace("&", "&amp;")}</span>
+        <i aria-hidden="true" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200" data-chevron></i>
+    </button>
+    <ul id="{gid}-panel" class="nav-drop-panel absolute left-0 top-full mt-1 min-w-[210px] rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md shadow-xl shadow-gray-900/10 dark:shadow-black/40 py-2 z-50" role="menu" aria-labelledby="{gid}-btn" hidden>
+        {links}
+    </ul>
+</div>''')
+    nav = "\n".join(items)
+    return f'<nav class="hidden lg:flex items-center gap-1" aria-label="Điều hướng chính" data-desktop-nav>{nav}</nav>'
 
 def sidebar():
     area_group = _nav_group("Khu Vực", AREAS, "fas fa-motorcycle", "bg-orange-500", "Chọn Khu Vực")
@@ -271,6 +299,7 @@ def header():
                 </span>
             </a>
         </div>
+        {desktop_nav()}
         <div class="flex items-center gap-4">
             <a href="tel:{PHONE_TEL}" class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-50/50 text-brand-600 dark:bg-gray-800/50 dark:text-brand-400 transition-colors font-bold text-sm">
                 <i aria-hidden="true" class="fas fa-phone text-xs"></i> {FACTS["phone"]}

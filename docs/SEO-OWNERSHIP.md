@@ -45,7 +45,11 @@ kinhnghiem.html (KN), antoan.html (AT), xemay.html (XM), dulich.html (DL), cungd
 
 ## Navigation taxonomy (3 nhóm UI / 6 category chuẩn)
 
-UI công khai (menu + footer) hiển thị đúng 3 nhóm "Cẩm Nang"; factory giữ nguyên 6 category chuẩn. Source of truth: `navigation_groups` trong `config/seo-ownership.json`.
+UI công khai hiển thị đúng 3 nhóm cha; factory giữ nguyên 6 category chuẩn. Source of truth: `navigation_groups` trong `config/seo-ownership.json`; `tools/build_pages.py` sinh UI deterministic từ config (không hard-code bản thứ hai).
+
+- Desktop (lg+): 3 parent dropdown trong header (hover + click + keyboard/focus).
+- Mobile drawer: 3 parent accordion (không hover), tap target >= 44px, aria-expanded/aria-controls.
+- Menu/footer/dropdown chỉ link tới 6 hub; không link bài viết riêng lẻ; bài viết vào qua breadcrumb → parent hub.
 
 | Nhóm UI | Category | Hub |
 |---------|----------|-----|

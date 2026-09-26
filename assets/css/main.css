@@ -178,3 +178,23 @@ body { font-family: 'Be Vietnam Pro', sans-serif; }
 .content-block li { margin-bottom: 0.5rem; line-height: 1.7; }
 .content-block h2 { font-size: 1.75rem; font-weight: 700; margin: 2rem 0 1rem; }
 .content-block h3 { font-size: 1.35rem; font-weight: 700; margin: 1.5rem 0 0.75rem; }
+
+/* Desktop parent/child dropdown navigation (lg+) */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .nav-dropdown:hover > .nav-drop-panel,
+    .nav-dropdown:focus-within > .nav-drop-panel {
+        display: block;
+    }
+    .nav-dropdown:hover > .nav-drop-btn [data-chevron],
+    .nav-dropdown:focus-within > .nav-drop-btn [data-chevron] {
+        transform: rotate(180deg);
+    }
+}
+.nav-drop-panel { display: none; }
+.nav-drop-panel.is-open { display: block; }
+.nav-drop-btn[aria-expanded="true"] [data-chevron] { transform: rotate(180deg); }
+/* Mobile drawer accordions: full tap targets, no sticky hover states */
+@media (max-width: 1023px) {
+    .nav-accordion summary { min-height: 44px; }
+    .nav-accordion summary ul, .nav-accordion a { min-height: 44px; }
+}

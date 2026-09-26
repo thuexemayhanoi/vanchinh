@@ -40,6 +40,21 @@ Lỗi critical:
 
 Ưu tiên nguồn chính thức VN (thuvienphapluat, cơ quan ban hành). Sai lệch critical → FAIL/REVIEW bất kể điểm tổng.
 
+## SEO score 0–100 (gate thứ hai, độc lập)
+
+`scripts/score_article_seo.py` chấm deterministic, tổng 100:
+
+- Technical 20 (canonical, lang, title, meta, 1 H1, indexable, content crawlable)
+- Intent/on-page 25 (keyword trong title/intro/heading, trả lời trực tiếp, không cannibalize intent thương mại)
+- Structure 20 (H2/H3, đoạn đọc được, độ sâu, không trùng lặp, kết luận)
+- Internal linking 15 (parent hub, 3–5 editorial, <=1 commercial, anchor đa dạng, không broken)
+- Structured data 10 (Article, BreadcrumbList, author, datePublished, mainEntityOfPage)
+- AI/GEO readiness 10 (đoạn trả lời ngắn, fact nhất quán, list rõ ràng, không nhồi từ khóa)
+
+Bands: PASS >= 90, REVIEW 80–89, FAIL < 80. Publish yêu cầu quality PASS VÀ SEO >= 90. Critical failure luôn override SEO score.
+
+Writer được tự tối ưu (title, meta, intro, H2/H3, đoạn trùng/filler, internal links, anchor, schema, kết luận, đoạn trả lời trực tiếp, wording) nhưng KHÔNG BAO GIỜ bịa fact/giá/giờ mở cửa/chính sách/pháp lý/nguồn. requires_sources=true mà không kiểm chứng được → REVIEW/BLOCKED.
+
 ## Điểm và gates
 
 - PASS: 90–100 và không critical.

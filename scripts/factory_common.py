@@ -12,7 +12,7 @@ MATRIX = pathlib.Path(os.environ.get("CONTENT_MATRIX", str(ROOT / "data" / "cont
 FACTS = json.loads((ROOT / "config" / "business-facts.json").read_text(encoding="utf-8"))
 RUBRIC = json.loads((ROOT / "config" / "article-rubric.json").read_text(encoding="utf-8"))
 OWNERSHIP = json.loads((ROOT / "config" / "seo-ownership.json").read_text(encoding="utf-8"))
-PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
+PROGRESS = pathlib.Path(os.environ.get("PROGRESS_FILE", str(ROOT / "reports" / "batches" / "factory-progress.json")))
 LOCK = ROOT / "data" / "batches" / "lock.json"
 TXN = ROOT / "data" / "batches" / "txn" / "txn.json"
 
@@ -227,4 +227,114 @@ def write_progress(published_commit_sha=""):
     }
     PROGRESS.parent.mkdir(parents=True, exist_ok=True)
     PROGRESS.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    return out
+
+
+# --- Chunked writer checkpoint + throughput (operational state) ------------
+# Matrix remains the ULTIMATE source of truth; the checkpoint is operational
+# state only. On any conflict (e.g. checkpoint says pending but matrix says
+# PUBLISHED) the MATRIX wins.
+CHECKPOINT = pathlib.Path(os.environ.get("WRITER_CHECKPOINT", str(ROOT / "data" / "batches" / "writer-checkpoint.json")))
+THROUGHPUT = pathlib.Path(os.environ.get("FACTORY_THROUGHPUT", str(ROOT / "reports" / "batches" / "factory-throughput.json")))
+DEFAULT_CHUNK = 10
+PILOT_CHUNK = 5
+SEO_PASS_MIN = 90  # publish gate: quality PASS AND seo_score >= 90
+
+CHECKPOINT_SCHEMA = "1"
+
+
+def read_checkpoint():
+    if not CHECKPOINT.exists():
+        return None
+    try:
+        cp = json.loads(CHECKPOINT.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if cp.get("schema_version") != CHECKPOINT_SCHEMA:
+        return None
+    # reconcile against the matrix (matrix > checkpoint)
+    rows = load_matrix()
+    by_id = {r["article_id"]: r for r in rows}
+    published = {aid for aid in (cp.get("published_ids") or [])
+                 if by_id.get(aid, {}).get("status") == "PUBLISHED"}
+    cp["published_ids"] = sorted(published)
+    for key in ("pending_publish_ids", "pass_ids", "pending_qa_ids", "written_ids",
+                "pending_repair_ids"):
+        vals = set(cp.get(key) or [])
+        vals -= published  # anything already published is no longer pending
+        vals = {v for v in vals if v in by_id}
+        cp[key] = sorted(vals)
+    cp["current_chunk_ids"] = [i for i in (cp.get("current_chunk_ids") or [])
+                               if i in by_id and by_id[i]["status"] != "PUBLISHED"]
+    return cp
+
+
+def write_checkpoint(batch=None, chunk_size=None, current_chunk_ids=None,
+                     last_completed_step=None, **lists):
+    cp = read_checkpoint() or {
+        "schema_version": CHECKPOINT_SCHEMA, "batch": batch, "chunk_size": chunk_size,
+        "current_chunk_ids": [], "written_ids": [], "pending_qa_ids": [],
+        "pending_repair_ids": [], "pass_ids": [], "pending_publish_ids": [],
+        "published_ids": [], "last_completed_step": "", "started_at": None,
+        "updated_at": None,
+    }
+    if batch:
+        cp["batch"] = batch
+    if chunk_size:
+        cp["chunk_size"] = chunk_size
+    if current_chunk_ids is not None:
+        cp["current_chunk_ids"] = sorted(set(current_chunk_ids))
+    if not cp.get("started_at"):
+        cp["started_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    for key in ("written_ids", "pending_qa_ids", "pending_repair_ids", "pass_ids",
+                "pending_publish_ids", "published_ids"):
+        if key in lists and lists[key] is not None:
+            cp[key] = sorted(set(lists[key]))
+        elif key in lists:
+            pass
+    if last_completed_step:
+        cp["last_completed_step"] = last_completed_step
+    cp["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT.write_text(json.dumps(cp, ensure_ascii=False, indent=2), encoding="utf-8")
+    return cp
+
+
+def clear_checkpoint():
+    if CHECKPOINT.exists():
+        CHECKPOINT.unlink()
+
+
+def write_throughput():
+    """Derived, REAL numbers only (from matrix + checkpoint). No estimates."""
+    rows = load_matrix()
+    cp = read_checkpoint() or {}
+    by_id = {r["article_id"]: r for r in rows}
+    written = [r for r in rows if r["status"] != "PLANNED"]
+    out = {
+        "current_batch": cp.get("batch"),
+        "chunk_size": cp.get("chunk_size"),
+        "chunks_completed": cp.get("chunks_completed", 0) if cp else 0,
+        "written": len(written),
+        "quality_pass": len([r for r in rows if r["status"] in ("PASS", "PUBLISHED")]),
+        "seo_pass": len([r for r in rows if r["status"] in ("PASS", "PUBLISHED")]),
+        "published": len([r for r in rows if r["status"] == "PUBLISHED"]),
+        "repair_count": sum(int(r["repair_attempts"] or 0) for r in rows),
+        "publish_operations": cp.get("publish_operations", 0) if cp else 0,
+        "elapsed_minutes": cp.get("elapsed_minutes", 0) if cp else 0,
+        "effective_articles_per_hour": 0,
+    }
+    started = cp.get("started_at") if cp else None
+    if started:
+        try:
+            t0 = time.mktime(time.strptime(started, "%Y-%m-%dT%H:%M:%SZ"))
+            elapsed = max(1, (time.time() - t0) / 60)
+            out["elapsed_minutes"] = round(elapsed, 1)
+            out["effective_articles_per_hour"] = round(out["published"] / (elapsed / 60), 1)
+        except Exception:
+            pass
+    if out["publish_operations"] and out["elapsed_minutes"]:
+        pass  # effective rate already real-derived above
+    THROUGHPUT.parent.mkdir(parents=True, exist_ok=True)
+    THROUGHPUT.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     return out

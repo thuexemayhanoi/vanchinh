@@ -194,6 +194,25 @@ Run trước đòi 50 nhưng xong 30 → run sau HOÀN TẤT 30 còn lại TRƯ�
 
 Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 
+## 21b. Navigation cha/con (UI contract)
+
+- Desktop (lg+): header có desktop nav với đúng 3 parent dropdown (Thuê xe & Hỏi đáp / Xe máy & An toàn / Du lịch & Cung đường), mỗi parent mở dropdown 2 hub con. Mở bằng hover (pointer fine), click và keyboard/focus (aria-expanded, aria-controls, Escape).
+- Mobile drawer: KHÔNG hover dropdown; 3 parent là accordion (details/summary, aria-expanded sync), tap target >= 44px, dùng được tại 320px, dark mode đúng.
+- Nguồn dữ liệu: `config/seo-ownership.json → navigation_groups` sinh deterministic qua `tools/build_pages.py` (`_nav_groups_from_config()`); không hard-code 2 bản độc lập.
+- Dropdown/menu/footer chỉ link tới HUB, không bao giờ link bài viết riêng lẻ; bài viết đến từ breadcrumb → parent hub.
+- Factory taxonomy vẫn là 6 category (KN/AT/XM/DL/CD/HD); 3 nhóm chỉ là UI grouping.
+
+## 21c. Content factory chunked mode
+
+- Batch vẫn 50 bài; writer làm việc theo CHUNK: pilot 5 bài, sau khi pilot xanh mặc định chunk 10 bài (max 10/chunk).
+- Lệnh: `claim B01 --limit N` (claim đúng N row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA chỉ chunk hiện tại), `publish B01` (grouped publish PASS của chunk hiện tại).
+- Publish yêu cầu: quality PASS VÀ SEO score >= 90 VÀ không critical.
+- Checkpoint: `data/batches/writer-checkpoint.json` (operational state; MATRIX > CHECKPOINT khi conflict).
+- Throughput: `reports/batches/factory-throughput.json` (số thật, không ước lượng).
+- SEO score: `scripts/score_article_seo.py` (0–100, deterministic; PASS>=90, REVIEW 80–89, FAIL<80). Reports: `reports/seo/articles/<id>.json` + `reports/seo/factory-seo-summary.json`.
+- Bulk scoring: `scripts/score_chunk.py --batch B01 --limit 10`.
+- Vòng đời: WRITE → quality score → SEO score → REPAIR (max 3) → re-score → publish nếu cả hai gate PASS.
+
 ## 22. Exact test commands
 
 Từ repo root:

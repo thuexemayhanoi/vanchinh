@@ -37,6 +37,31 @@ Terminal: FAIL, BLOCKED
 - PUBLISHED: sau khi file bài + hub + sitemap + reports + matrix commit nhất quán trong MỘT transaction.
 - Bài FAIL/BLOCKED không chặn bài PASS khác trong cùng batch.
 
+## Chunked writer mode (canonical)
+
+Batch vẫn 50 bài; writer làm việc theo chunk pilot 5 → 10 bài:
+
+```bash
+python3 scripts/run_article_batch.py claim B01 --limit 5    # pilot chunk đầu
+# writer viết 5 file; qa scoped; publish grouped; pilot xanh →
+python3 scripts/run_article_batch.py claim B01 --limit 10   # chunk chuẩn (max 10)
+python3 scripts/run_article_batch.py qa B01                 # scoped theo checkpoint current chunk
+python3 scripts/run_article_batch.py publish B01            # grouped publish chunk hiện tại
+python3 scripts/run_article_batch.py checkpoint             # xem trạng thái checkpoint
+python3 scripts/run_article_batch.py throughput             # sinh factory-throughput.json
+```
+
+Quy tắc:
+
+- claim chỉ chuyển đúng N row PLANNED → WRITING (không claim cả 50).
+- qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái.
+- Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác.
+- PUBLISHED không bao giờ bị claim lại.
+- Checkpoint `data/batches/writer-checkpoint.json`: schema_version, batch, chunk_size, current_chunk_ids, written_ids, pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, published_ids, last_completed_step, updated_at. MATRIX > CHECKPOINT khi xung đột.
+- Publish gate: quality PASS VÀ SEO >= 90 (`score_article_seo.py`), không critical. SEO 100 không cứu được quality FAIL hay critical.
+- SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.
+- Throughput: `reports/batches/factory-throughput.json` (số liệu thật từ matrix + checkpoint).
+
 ## Vòng đời một batch (lệnh chuẩn)
 
 Từ repo root, mỗi operator run:
