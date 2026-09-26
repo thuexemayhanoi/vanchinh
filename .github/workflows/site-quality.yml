@@ -26,6 +26,7 @@ jobs:
           python3 - <<'EOF'
           import json
           f = json.load(open('config/business-facts.json'))
-          assert '09:00' in f['opening_hours'] and '17:00' in f['opening_hours'], f['opening_hours']
+          oh = f['opening_hours']
+          assert oh['opens'] == '09:00' and oh['closes'] == '17:00' and len(oh['days']) == 7, oh
           print('business-facts OK')
           EOF
