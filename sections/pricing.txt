@@ -1,0 +1,101 @@
+           <section id="pricing" class="space-y-8">
+               <div class="text-center max-w-3xl mx-auto space-y-4">
+                   <h2 class="text-3xl font-bold text-gray-900 dark:text-white inline-block border-b-4 border-brand-500 pb-2">Bảng Giá Thuê Xe Máy Chi Tiết</h2>
+                   <p class="text-gray-600 dark:text-gray-300">
+                       Mức giá được niêm yết công khai, minh bạch, <strong>KHÔNG CÓ CHI PHÍ ẨN</strong>. Mỗi xe giao đi đều kèm sẵn: 02 Mũ bảo hiểm chuẩn, 02 áo mưa, và 1 lít xăng miễn phí.
+                   </p>
+               </div>
+
+               <div class="grid md:grid-cols-3 gap-8">
+                   <div class="glass-panel rounded-2xl p-8 relative hover:-translate-y-2 transition-transform duration-300 border-t-4 border-blue-500 flex flex-col bg-white/40 dark:bg-gray-800/40">
+                       <div class="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Phượt Dã Ngoại</div>
+                       <div class="text-center mb-6">
+                           <div class="w-16 h-16 mx-auto bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400">
+                               <i aria-hidden="true" class="fas fa-motorcycle text-3xl"></i>
+                           </div>
+                           <h3 class="text-xl font-bold text-gray-900 dark:text-white">Xe Số Thể Thao</h3>
+                           <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Wave Alpha, Sirius, Blade</p>
+                       </div>
+                       
+                       <div class="text-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-6">
+                           <span class="text-4xl font-extrabold text-blue-600 dark:text-blue-400">150k</span>
+                           <span class="text-gray-500 dark:text-gray-400 font-medium">/ Ngày</span>
+                       </div>
+                       
+                       <ul class="space-y-4 mb-8 flex-1 text-gray-700 dark:text-gray-300 text-sm">
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tuần:</strong> 600.000đ - 900.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tháng:</strong> 800.000đ - 1.200.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-shield-alt text-blue-500 mr-3"></i> <strong>Tiền Cọc:</strong> Chỉ từ 2.000.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-star text-yellow-500 mr-3"></i> Phù hợp leo dốc, đi đường dài</li>
+                       </ul>
+                       
+                       <a href="tel:0989595533" class="w-full block text-center bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white transition-colors font-bold py-3 rounded-xl border border-blue-200 dark:border-blue-800">
+                           Đặt Xe Số Ngay
+                       </a>
+                   </div>
+
+                   <div class="glass-panel rounded-2xl p-8 relative hover:-translate-y-2 transition-transform duration-300 border-t-4 border-brand-500 flex flex-col bg-brand-50/40 dark:bg-brand-900/10 transform md:scale-105 shadow-xl z-10">
+                       <div class="absolute top-0 right-0 bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg animate-pulse">Phổ Biến Nhất</div>
+                       <div class="text-center mb-6">
+                           <div class="w-16 h-16 mx-auto bg-brand-100 dark:bg-brand-900/50 rounded-full flex items-center justify-center mb-4 text-brand-600 dark:text-brand-400">
+                               <i aria-hidden="true" class="fas fa-biking text-3xl"></i>
+                           </div>
+                           <h3 class="text-xl font-bold text-gray-900 dark:text-white">Xe Ga Phổ Thông</h3>
+                           <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Vision, Janus, Address</p>
+                       </div>
+                       
+                       <div class="text-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-6">
+                           <span class="text-4xl font-extrabold text-brand-600 dark:text-brand-400">200k</span>
+                           <span class="text-gray-500 dark:text-gray-400 font-medium">/ Ngày</span>
+                       </div>
+                       
+                       <ul class="space-y-4 mb-8 flex-1 text-gray-700 dark:text-gray-300 text-sm">
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tuần:</strong> 800.000đ - 1.000.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tháng:</strong> 1.200.000đ - 1.500.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-shield-alt text-brand-500 mr-3"></i> <strong>Tiền Cọc:</strong> Chỉ từ 3.000.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-star text-yellow-500 mr-3"></i> Dễ đi, cốp rộng, dạo phố êm ái</li>
+                       </ul>
+                       
+                       <a href="tel:0989595533" class="w-full block text-center bg-brand-600 hover:bg-brand-700 text-white transition-colors font-bold py-3 rounded-xl shadow-lg">
+                           Đặt Xe Ga Ngay
+                       </a>
+                   </div>
+
+                   <div class="glass-panel rounded-2xl p-8 relative hover:-translate-y-2 transition-transform duration-300 border-t-4 border-purple-500 flex flex-col bg-white/40 dark:bg-gray-800/40">
+                       <div class="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Sang Trọng</div>
+                       <div class="text-center mb-6">
+                           <div class="w-16 h-16 mx-auto bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center mb-4 text-purple-600 dark:text-purple-400">
+                               <i aria-hidden="true" class="fas fa-gem text-3xl"></i>
+                           </div>
+                           <h3 class="text-xl font-bold text-gray-900 dark:text-white">Xe Ga Cao Cấp</h3>
+                           <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">AirBlade 125/150, Lead Đời Mới</p>
+                       </div>
+                       
+                       <div class="text-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-6">
+                           <span class="text-4xl font-extrabold text-purple-600 dark:text-purple-400">250k</span>
+                           <span class="text-gray-500 dark:text-gray-400 font-medium">/ Ngày</span>
+                       </div>
+                       
+                       <ul class="space-y-4 mb-8 flex-1 text-gray-700 dark:text-gray-300 text-sm">
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tuần:</strong> Từ 900.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-check text-green-500 mr-3"></i> <strong>Thuê Tháng:</strong> 1.500.000đ - 2.000.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-shield-alt text-purple-500 mr-3"></i> <strong>Tiền Cọc:</strong> Từ 5.000.000đ</li>
+                           <li class="flex items-center"><i aria-hidden="true" class="fas fa-star text-yellow-500 mr-3"></i> Máy cực khỏe, dáng thể thao/cốp to</li>
+                       </ul>
+                       
+                       <a href="tel:0989595533" class="w-full block text-center bg-purple-100 hover:bg-purple-600 text-purple-700 hover:text-white dark:bg-purple-900/40 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white transition-colors font-bold py-3 rounded-xl border border-purple-200 dark:border-purple-800">
+                           Đặt Xe Cao Cấp
+                       </a>
+                   </div>
+               </div>
+               
+               <div class="glass-panel p-5 bg-yellow-50/40 border-l-4 border-yellow-400 rounded-r-xl">
+                   <p class="font-bold text-yellow-800 dark:text-yellow-200 text-lg mb-2">
+                       <i aria-hidden="true" class="fas fa-bullhorn mr-2 animate-bounce"></i> Siêu Khuyến Mãi Đặc Biệt:
+                   </p>
+                   <p class="text-yellow-700 dark:text-yellow-300 text-sm md:text-base">
+                        Sinh viên mang thẻ SV đến nhận xe tận cửa hàng sẽ được <strong>trừ ngay 10% tổng bill</strong> hóa đơn. Cam kết tặng thêm dây thun chằng đồ, hỗ trợ bọc nilon bảo vệ balo miễn phí cho dân phượt!
+                   </p>
+               </div>
+           </section>
+

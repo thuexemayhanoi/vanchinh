@@ -1,0 +1,87 @@
+       <section class="relative min-h-[600px] flex items-center justify-center overflow-hidden">
+           <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+               <div class="absolute top-0 right-0 w-96 h-96 bg-blue-400/30 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+               <div class="absolute top-40 left-0 w-72 h-72 bg-purple-400/30 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" style="animation-delay: 2s;"></div>
+               <div class="absolute -bottom-8 right-20 w-80 h-80 bg-pink-400/30 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" style="animation-delay: 4s;"></div>
+           </div>
+
+           <div class="container mx-auto px-4 z-10 grid md:grid-cols-2 gap-12 items-center py-12">
+               <div class="text-center md:text-left space-y-6">
+                   <span class="inline-block px-4 py-1.5 rounded-full bg-white/40 border border-white/40 text-brand-700 text-sm font-semibold tracking-wide backdrop-blur-sm shadow-sm dark:bg-white/10 dark:text-brand-300">
+                       <i aria-hidden="true" class="fas fa-check-circle mr-1"></i> Đối tác du lịch tin cậy số 1 Thủ Đô
+                   </span>
+                   
+                   <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-gray-900 dark:text-white drop-shadow-sm">
+                       <span class="gradient-text">Cho Thuê Xe Máy Hà Nội - Văn Chính</span>
+                   </h1>
+                   
+                   <div class="text-lg md:text-xl text-gray-600 dark:text-gray-200 max-w-lg mx-auto md:mx-0 font-medium space-y-3">
+                       <p><i aria-hidden="true" class="fas fa-star text-yellow-500 mr-1"></i> Chào mừng bạn đến với trung tâm giao dịch xe gắn máy hàng đầu. Việc tìm kiếm một nơi mướn xe máy Hà Nội uy tín giờ đây trở nên vô cùng dễ dàng.</p>
+                       <p class="text-base font-normal">Tại Văn Chính, chúng tôi cam kết mang lại trải nghiệm hoàn hảo với hệ thống xe tay ga, xe số đời mới. Đặc biệt hỗ trợ sinh viên và khách du lịch với chính sách <strong>cọc nhẹ</strong>, giao xe hỏa tốc khu vực Nguyễn Văn Cừ, Long Biên, Phố Cổ và toàn bộ nội thành Hà Nội. An toàn, trọn vẹn cho mọi chuyến đi phượt hay công tác dài ngày!</p>
+                   </div>
+                   
+                   <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
+                       <a href="tel:0989595533" class="inline-flex items-center justify-center px-8 py-3.5 text-base font-bold text-white transition-all duration-200 bg-brand-600/90 border border-transparent rounded-full shadow-lg hover:bg-brand-700 backdrop-blur-sm hover:shadow-brand-500/50 hover:-translate-y-1">
+                           <i aria-hidden="true" class="fas fa-phone-alt mr-2 animate-pulse"></i> Gọi Đặt Xe: 0989.595.533
+                       </a>
+                       <a href="#ai-features" class="inline-flex items-center justify-center px-8 py-3.5 text-base font-bold text-gray-800 transition-all duration-200 bg-white/80 border border-white/40 rounded-full shadow-md hover:bg-white backdrop-blur-sm hover:shadow-lg dark:bg-gray-800/80 dark:text-white dark:hover:bg-gray-700">
+                           <span class="mr-2">✨</span> Trải Nghiệm Trợ Lý AI
+                       </a>
+                   </div>
+               </div>
+
+               <div id="calculator" class="glass-panel rounded-2xl p-6 md:p-8 transform transition-all hover:scale-[1.01] duration-300">
+                   <div class="mb-6 text-center">
+                       <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2"><i aria-hidden="true" class="fas fa-calculator mr-2 text-brand-500"></i>Tính Tiền Nhanh Chóng</h2>
+                       <p class="text-sm text-gray-600 dark:text-gray-300">Dự toán chi phí thuê xe của bạn trong 3 giây</p>
+                   </div>
+
+                   <form id="rental-form" class="space-y-4" onsubmit="return false;">
+                       <div>
+                           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Chọn loại xe di chuyển</label>
+                           <div class="grid grid-cols-2 gap-3">
+                               <button type="button" class="bike-select-btn active ring-2 ring-brand-500 bg-brand-50/70 dark:bg-gray-700/70 p-3 rounded-lg border border-transparent flex flex-col items-center gap-2 transition-all backdrop-blur-sm" data-value="150000">
+                                   <i aria-hidden="true" class="fas fa-motorcycle text-2xl text-gray-700 dark:text-gray-200"></i>
+                                   <span class="text-sm font-semibold text-gray-800 dark:text-white">Xe Số Tiết Kiệm</span>
+                                   <span class="text-xs text-brand-600 dark:text-brand-300 font-medium">Từ 150k/ngày</span>
+                               </button>
+                               <button type="button" class="bike-select-btn bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-white/20 dark:border-gray-600 flex flex-col items-center gap-2 hover:bg-white/80 dark:hover:bg-gray-700 transition-all backdrop-blur-sm" data-value="200000">
+                                   <i aria-hidden="true" class="fas fa-biking text-2xl text-gray-600 dark:text-gray-300"></i>
+                                   <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">Xe Ga Sang Trọng</span>
+                                   <span class="text-xs text-brand-600 dark:text-brand-300 font-medium">Từ 200k/ngày</span>
+                               </button>
+                           </div>
+                           <input type="hidden" id="bike-price" value="150000">
+                       </div>
+
+                       <div>
+                           <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Thời gian mướn xe (Ngày)</label>
+                           <div class="flex items-center border border-gray-300/50 dark:border-gray-600/50 rounded-lg overflow-hidden bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm">
+                               <button aria-label="Giảm số ngày" type="button" onclick="adjustDays(-1)" class="px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">-</button>
+                               <input type="number" id="days" value="1" min="1" max="90" required class="w-full text-center py-2 border-none focus:ring-0 bg-transparent font-bold text-lg dark:text-white">
+                               <button aria-label="Tăng số ngày" type="button" onclick="adjustDays(1)" class="px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">+</button>
+                           </div>
+                       </div>
+
+                       <div class="pt-4 border-t border-gray-200/50 dark:border-gray-600/50">
+                           <div class="flex justify-between items-center mb-4">
+                               <span class="text-gray-700 dark:text-gray-300 font-medium">Chi phí dự kiến:</span>
+                               <span id="total-price" class="text-3xl font-bold text-brand-600 dark:text-brand-400">150.000đ</span>
+                           </div>
+                           <a href="tel:0989595533" class="block w-full py-3.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transform active:scale-95 transition-all text-center border border-white/20">
+                               <i aria-hidden="true" class="fas fa-paper-plane mr-2"></i> Đặt Lịch Nhận Xe Ngay
+                           </a>
+                       </div>
+                   </form>
+               </div>
+           </div>
+           
+           <div class="absolute bottom-0 left-0 w-full leading-none rotate-180 opacity-90">
+               <svg class="relative block w-full h-[60px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+                   <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" class="fill-gray-50 dark:fill-gray-900/50"></path>
+               </svg>
+           </div>
+       </section>
+
+       <article class="container mx-auto px-4 py-16 space-y-20 max-w-5xl relative z-10">
+           

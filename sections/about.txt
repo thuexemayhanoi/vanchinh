@@ -1,0 +1,43 @@
+           <section id="about" class="space-y-6">
+               <h2 class="text-3xl font-bold text-gray-900 dark:text-white border-l-4 border-brand-500 pl-4">Vì Sao Thương Hiệu Cho Thuê Xe Máy Hà Nội - Văn Chính Được Hàng Ngàn Khách Hàng Lựa Chọn?</h2>
+               
+               <div class="glass-panel p-6 rounded-xl text-gray-700 dark:text-gray-200 space-y-4 leading-relaxed">
+                   <p>
+                       <i aria-hidden="true" class="fas fa-city text-gray-400 mr-1"></i> Hà Nội - Trái tim của cả nước, nơi giao thoa giữa nhịp sống hối hả hiện đại và vẻ đẹp trầm mặc của 36 phố phường. Để thực sự cảm nhận được "hồn cốt" của Thủ đô, len lỏi qua từng con ngõ nhỏ ngửi mùi hoa sữa, hay lượn vòng quanh Hồ Tây lộng gió vào buổi chiều tà, không có phương tiện nào hoàn hảo hơn một chiếc xe máy. Đó chính là lý do nhu cầu <strong>mướn xe máy Hà Nội</strong> luôn bùng nổ quanh năm. Tuy nhiên, việc tìm được một cơ sở cung cấp xe tốt, máy êm, không chết máy giữa đường lại là một bài toán khó với nhiều du khách.
+                   </p>
+                   <p>
+                       <i aria-hidden="true" class="fas fa-map-pin text-red-400 mr-1"></i> Thấu hiểu được nỗi lo lắng đó, hệ thống <strong><a href="https://chothuexemayohanoi.github.io/vanchinh/" class="text-brand-600 font-semibold hover:underline">Cho thuê xe máy Hà Nội - Văn Chính</a></strong> ra đời với sứ mệnh mang đến sự an tâm tuyệt đối cho mọi khách hàng. Nằm tọa lạc tại trung tâm cửa ngõ phía Đông Thủ đô: <strong>Số 24 Ngõ 5 Nguyễn Văn Cừ, Ngọc Lâm, quận Long Biên</strong>, cửa hàng chúng tôi là điểm đến chiến lược, vô cùng thuận tiện cho du khách cần thuê xe máy tại Long Biên hoặc di chuyển qua cầu Chương Dương để sang khám phá Phố Cổ, Hồ Hoàn Kiếm chỉ mất chưa đầy 5 phút.
+                   </p>
+                   <p>
+                       <i aria-hidden="true" class="fas fa-motorcycle text-brand-500 mr-1"></i> <strong>Chất lượng xe làm nên thương hiệu:</strong> Không giống như các dịch vụ chạy theo số lượng, tại Văn Chính, 100% dàn xe tay ga (Honda Vision, Air Blade, Lead) và xe số (Honda Wave Alpha, Sirius, Blade) đều được chúng tôi tuyển chọn kỹ lưỡng, mua mới và bảo dưỡng định kỳ thay dầu mỡ hàng tháng. Chúng tôi tự tin xe bốc, phanh ăn, lốp dày dặn, đáp ứng hoàn hảo cả việc chạy dạo trong nội thành đông đúc lẫn những chuyến phượt ngoại ô dài ngày như leo đền Gióng (Sóc Sơn) hay vườn quốc gia Ba Vì.
+                   </p>
+                   <p>
+                       <i aria-hidden="true" class="fas fa-check text-green-500 mr-1"></i> Không chỉ cạnh tranh về chất lượng máy móc, chúng tôi tự hào mang đến trải nghiệm <strong>"Thuê xe máy cọc nhẹ 0đ"</strong> đột phá. Đặc biệt thấu hiểu nhóm khách hàng là sinh viên, người đi công tác ngắn ngày hoặc du khách nước ngoài, Văn Chính lược bỏ tối đa các bước giấy tờ rườm rà. Chỉ với Căn cước công dân gắn chip hoặc Hộ chiếu, kèm theo giấy phép lái xe, bạn sẽ nhận chìa khóa xe trong đúng 5 phút đồng hồ.
+                   </p>
+               </div>
+               
+               <div class="grid md:grid-cols-3 gap-6 mt-8">
+                   <div class="glass-panel p-6 rounded-xl hover:shadow-xl transition-all hover:-translate-y-1">
+                       <div class="w-16 h-16 rounded-full bg-brand-100/50 flex items-center justify-center mb-4">
+                           <i aria-hidden="true" class="fas fa-hand-holding-usd text-3xl text-brand-600"></i>
+                       </div>
+                       <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Không Lo Phí Cọc Tiền Mặt</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300">Với phương châm tin tưởng khách hàng, thủ tục của chúng tôi tinh gọn. Gần như hỗ trợ sinh viên và khách du lịch không cần phải cọc một khoản tiền lớn, giúp bạn tiết kiệm ngân sách đi chơi.</p>
+                   </div>
+                   <div class="glass-panel p-6 rounded-xl hover:shadow-xl transition-all hover:-translate-y-1">
+                       <div class="w-16 h-16 rounded-full bg-green-100/50 flex items-center justify-center mb-4">
+                           <i aria-hidden="true" class="fas fa-shipping-fast text-3xl text-green-600"></i>
+                       </div>
+                       <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Giao Xe Tận Nơi Tốc Độ Tên Lửa</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300">Bạn đang ở khách sạn, bến xe hay quán cafe? Đội ngũ nhân viên sẽ mang xe đến tận nơi miễn phí trong bán kính 3-5km (Nguyễn Văn Cừ, Ngọc Lâm, Gia Lâm, Hoàn Kiếm). Nhận xe ngay sau 15 phút gọi điện.</p>
+                   </div>
+                   <div class="glass-panel p-6 rounded-xl hover:shadow-xl transition-all hover:-translate-y-1">
+                       <div class="w-16 h-16 rounded-full bg-orange-100/50 flex items-center justify-center mb-4">
+                           <i aria-hidden="true" class="fas fa-tools text-3xl text-orange-600"></i>
+                       </div>
+                       <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Cứu Hộ Lốp & Động Cơ 24/7</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300">Sự cố giữa đường là điều không ai mong muốn. Nhưng nếu gặp sự cố xịt lốp, chết máy, chúng tôi có đội cơ động trực tuyến 24/24 sẵn sàng mang xe mới đến đổi trả cho bạn ngay lập tức, không làm lỡ lịch trình.</p>
+                   </div>
+               </div>
+           </section>
+

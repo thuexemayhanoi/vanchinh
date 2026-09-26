@@ -1,0 +1,94 @@
+           <section id="reviews" class="space-y-8 pt-6">
+               <div class="text-center max-w-2xl mx-auto">
+                   <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-3">Khách Hàng Nói Gì Về Chúng Tôi?</h2>
+                   <p class="text-gray-600 dark:text-gray-400">Hàng ngàn chuyến đi an toàn và những nụ cười hài lòng là minh chứng rõ ràng nhất cho chất lượng dịch vụ tại Văn Chính.</p>
+               </div>
+
+               <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   <div class="glass-panel p-6 rounded-2xl flex flex-col relative">
+                       <i aria-hidden="true" class="fas fa-quote-right absolute top-4 right-6 text-4xl text-gray-200 dark:text-gray-700/50"></i>
+                       <div class="flex items-center gap-1 text-yellow-400 text-sm mb-3">
+                           <i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i>
+                       </div>
+                       <p class="text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4 italic">
+                           "Mình là sinh viên thuê xe để đi làm thêm part-time theo tháng. Chú Chính hỗ trợ giá sinh viên rất tốt, xe Vision đi cực êm và tiết kiệm xăng. Đến tháng ra thay dầu chú còn không lấy tiền công."
+                       </p>
+                       <div class="flex items-center gap-3 mt-auto">
+                           <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 font-bold">T</div>
+                           <div>
+                               <h4 class="font-bold text-gray-900 dark:text-white text-sm">Tuấn Anh</h4>
+                               <span class="text-xs text-gray-500">Sinh viên ĐH Kinh Tế Quốc Dân</span>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl flex flex-col relative md:translate-y-4">
+                       <i aria-hidden="true" class="fas fa-quote-right absolute top-4 right-6 text-4xl text-gray-200 dark:text-gray-700/50"></i>
+                       <div class="flex items-center gap-1 text-yellow-400 text-sm mb-3">
+                           <i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i>
+                       </div>
+                       <p class="text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4 italic">
+                           "Nhóm mình từ Sài Gòn ra chơi, gọi điện cái là 15 phút sau nhân viên mang 3 chiếc Wave Alpha thẳng tới khách sạn ở Phố Cổ. Xe mới tinh, lốp bám đường tốt, đi Tam Đảo 2 ngày không một vết gợn."
+                       </p>
+                       <div class="flex items-center gap-3 mt-auto">
+                           <div class="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center text-pink-600 font-bold">M</div>
+                           <div>
+                               <h4 class="font-bold text-gray-900 dark:text-white text-sm">Minh Hằng</h4>
+                               <span class="text-xs text-gray-500">Khách du lịch TP.HCM</span>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl flex flex-col relative">
+                       <i aria-hidden="true" class="fas fa-quote-right absolute top-4 right-6 text-4xl text-gray-200 dark:text-gray-700/50"></i>
+                       <div class="flex items-center gap-1 text-yellow-400 text-sm mb-3">
+                           <i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i>
+                       </div>
+                       <p class="text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4 italic">
+                           "Rất ấn tượng với quy trình làm việc. Mình cần xe AirBlade gấp để đi công tác dưới Hưng Yên. Chỉ cần để lại căn cước, ký hợp đồng trên điện thoại là nhận xe. Xe sạch sẽ, có sẵn áo mưa và xăng."
+                       </p>
+                       <div class="flex items-center gap-3 mt-auto">
+                           <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 font-bold">H</div>
+                           <div>
+                               <h4 class="font-bold text-gray-900 dark:text-white text-sm">Hoàng Hải</h4>
+                               <span class="text-xs text-gray-500">Người đi công tác</span>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl flex flex-col relative lg:translate-x-1/2 md:col-span-1 lg:col-span-1">
+                       <i aria-hidden="true" class="fas fa-quote-right absolute top-4 right-6 text-4xl text-gray-200 dark:text-gray-700/50"></i>
+                       <div class="flex items-center gap-1 text-yellow-400 text-sm mb-3">
+                           <i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i>
+                       </div>
+                       <p class="text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4 italic">
+                           "Excellent service! The owner speaks basic English but is very helpful. Rented a scooter for a week to explore Hanoi. No hidden fees, passport deposit was safe. Highly recommend for expats."
+                       </p>
+                       <div class="flex items-center gap-3 mt-auto">
+                           <div class="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold">D</div>
+                           <div>
+                               <h4 class="font-bold text-gray-900 dark:text-white text-sm">David Smith</h4>
+                               <span class="text-xs text-gray-500">Giáo viên Tiếng Anh</span>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl flex flex-col relative lg:translate-x-1/2 md:translate-y-4 lg:translate-y-0">
+                       <i aria-hidden="true" class="fas fa-quote-right absolute top-4 right-6 text-4xl text-gray-200 dark:text-gray-700/50"></i>
+                       <div class="flex items-center gap-1 text-yellow-400 text-sm mb-3">
+                           <i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star"></i><i aria-hidden="true" class="fas fa-star-half-alt"></i>
+                       </div>
+                       <p class="text-gray-700 dark:text-gray-300 text-sm flex-1 mb-4 italic">
+                           "Đêm qua xe mình bị thủng xăm ở tận cầu Vĩnh Tuy lúc 10h tối. Gọi hotline bên Văn Chính cho đội cứu hộ mang hẳn một con xe khác ra đổi luôn để mình về nhà an toàn. Quá tuyệt vời 10 điểm!"
+                       </p>
+                       <div class="flex items-center gap-3 mt-auto">
+                           <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 font-bold">L</div>
+                           <div>
+                               <h4 class="font-bold text-gray-900 dark:text-white text-sm">Lan Phương</h4>
+                               <span class="text-xs text-gray-500">Khách hàng thuê ngày</span>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           </section>
+

@@ -1,0 +1,271 @@
+       function simulateAIResponse(promptType, inputData) {
+           return new Promise((resolve) => {
+               const delay = 1500;
+               setTimeout(() => {
+                   let response = "";
+                   
+                   if (promptType === 'plan') {
+                       if (inputData.includes('1 ngày')) {
+                           response = `
+### 🏍️ Lịch Trình 1 Ngày Vi Vu Hà Nội
+*Lộ trình: Long Biên - Phố Cổ - Hồ Tây*
+
+* **08:00:** Nhận xe tại Văn Chính (Ngõ 5 Nguyễn Văn Cừ). Ăn sáng Bún chả Hàng Than.
+* **09:30:** Check-in Cầu Long Biên lịch sử.
+* **10:30:** Lượn lờ Phố Cổ (Nhà Thờ Lớn, Hồ Gươm).
+* **12:00:** Ăn trưa Phở Bát Đàn hoặc Bún đậu mắm tôm Ngõ Phất Lộc.
+* **14:30:** Di chuyển lên Hồ Tây, uống cafe view hồ (65 Trích Sài).
+* **17:00:** Ngắm hoàng hôn Hồ Tây.
+* **19:00:** Ăn tối Nầm bò nướng Gầm Cầu.
+* **20:30:** Trả xe tại Văn Chính.
+
+**💡 Tip:** Đường Phố Cổ nhiều đường 1 chiều, chú ý biển báo nhé!
+                           `;
+                       } else if (inputData.includes('2 ngày')) {
+                            response = `
+### 🌲 Lịch Trình 2 Ngày 1 Đêm: Sóc Sơn - Hàm Lợn
+*Trốn khói bụi thành phố - Cắm trại chill*
+
+**Ngày 1:**
+* **07:00:** Thuê xe số tại Văn Chính (leo dốc khỏe).
+* **09:00:** Di chuyển hướng Cầu Nhật Tân -> Sóc Sơn.
+* **10:30:** Đến Núi Hàm Lợn. Dựng trại ven hồ.
+* **12:00:** Nướng BBQ ngoài trời.
+* **Chiều:** Trekking rừng thông, chụp ảnh.
+* **Tối:** Đốt lửa trại, ngắm sao.
+
+**Ngày 2:**
+* **06:00:** Đón bình minh, pha cafe.
+* **09:00:** Tham quan Đền Gióng.
+* **12:00:** Ăn gà đồi Sóc Sơn.
+* **15:00:** Khởi hành về Hà Nội, trả xe.
+                            `;
+                       } else {
+                           response = `
+### 🌃 Lịch Trình Buổi Tối Lượn Phố
+* **19:00:** Lấy xe tại Văn Chính.
+* **19:30:** Hóng gió trên cầu Chương Dương (chú ý đi đúng làn xe máy).
+* **20:00:** Lượn vòng hồ Gươm (nếu không phải cuối tuần cấm xe).
+* **21:00:** Ăn kem Tràng Tiền.
+* **22:00:** Làm vòng Hồ Tây, hóng gió mát rượi.
+* **23:00:** Ăn đêm cháo sườn sụn Chợ Đồng Xuân.
+                           `;
+                       }
+                   } 
+                   
+                   else if (promptType === 'food') {
+                       const lowerInput = inputData.toLowerCase();
+                       if (lowerInput.includes('phở')) {
+                           response = `
+### 🍜 Quán Phở Ngon Gần Bạn
+1.  **Phở Lâm - Hàng Vải** (Cách 2km)
+    * Đặc điểm: Lõi rùa giòn sần sật, nước dùng trong.
+    * Giá: 50k - 70k.
+2.  **Phở Lý Quốc Sư** (Gốc)
+    * Đặc điểm: Nổi tiếng, nước dùng đậm đà.
+    * Giá: 60k - 90k.
+3.  **Phở Gà Nguyệt - Phủ Doãn** (Buổi tối)
+    * Đặc điểm: Phở trộn ngon nhất nhì Hà Nội.
+                           `;
+                       } else if (lowerInput.includes('bún')) {
+                           response = `
+### 🥗 Bún Chả & Bún Đậu Must-Try
+1.  **Bún Chả Hương Liên (Obama)** - Lê Văn Hưu
+    * Đã từng đón tổng thống Obama.
+2.  **Bún Đậu Mắm Tôm Hàng Khay**
+    * Full topping dồi sụn, chả cốm.
+3.  **Bún Riêu Cua Hàng Bạc**
+    * Nước dùng chua thanh, riêu cua thật.
+                           `;
+                       } else if (lowerInput.includes('cafe') || lowerInput.includes('cà phê')) {
+                           response = `
+### ☕ Cafe View Đẹp - Sống Ảo
+1.  **Serein Cafe** - Ga Long Biên
+    * View trọn cầu Long Biên cổ kính.
+2.  **Hanoi House Cafe** - Lý Quốc Sư
+    * View nhìn thẳng Nhà Thờ Lớn.
+3.  **Cafe Giảng** - Nguyễn Hữu Huân
+    * Món tủ: Cafe Trứng huyền thoại.
+                           `;
+                       } else {
+                            response = `
+### 😋 Gợi ý ngẫu nhiên cho bạn
+Nếu bạn chưa biết ăn gì, hãy thử **Food Tour Ngọc Lâm** ngay gần Văn Chính:
+1.  **Bánh mì dân tổ** (Đêm).
+2.  **Tào phớ Nghĩa Tân** (Giải nhiệt).
+3.  **Nem nướng Nha Trang** khu Ngọc Lâm.
+Hoặc ghé Phố Cổ ăn **Xôi Yến** Nguyễn Hữu Huân nhé!
+                            `;
+                       }
+                   }
+
+                   else if (promptType === 'mechanic') {
+                       const lowerInput = inputData.toLowerCase();
+                       if (lowerInput.includes('không đề') || lowerInput.includes('tắt máy')) {
+                           response = `
+### ⚠️ Chẩn đoán: Hết ắc quy hoặc Bugi ẩm
+* **Mức độ:** Cần kiểm tra ngay.
+* **Lời khuyên:**
+    1. Thử đạp cần khởi động (nếu là xe số).
+    2. Nếu xe ga, kiểm tra gạt chân chống cạnh chưa?
+    3. Nếu không được, gọi ngay SĐT Văn Chính 0989595533 để được cứu hộ.
+                           `;
+                       } else if (lowerInput.includes('lốp') || lowerInput.includes('xăm') || lowerInput.includes('thủng')) {
+                           response = `
+### ⚠️ Chẩn đoán: Thủng săm/lốp
+* **Mức độ:** Nguy hiểm, không cố đi tiếp.
+* **Lời khuyên:**
+    1. Dừng xe vào lề đường an toàn.
+    2. Tìm tiệm sửa xe gần nhất (tìm "Sửa xe máy" trên Google Maps).
+    3. Tuyệt đối không đi cố sẽ làm hỏng vành xe.
+                           `;
+                       } else if (lowerInput.includes('kêu')) {
+                           response = `
+### ⚠️ Chẩn đoán: Nhông xích khô hoặc bộ nồi
+* **Mức độ:** Cần kiểm tra sớm.
+* **Lời khuyên:**
+    1. Nếu tiếng "lạch cạch" ở hộp xích: Cần tra dầu hoặc tăng xích.
+    2. Nếu tiếng "gào" khi lên ga: Có thể do bộ nồi (côn) bị mòn.
+    3. Hãy ghé qua cửa hàng Văn Chính để thợ kiểm tra miễn phí.
+                           `;
+                       } else {
+                           response = `
+### ℹ️ Tư vấn kỹ thuật
+Hiện tượng bạn mô tả cần được thợ kiểm tra trực tiếp để chính xác nhất.
+* **Lời khuyên:** Đừng lo lắng, hãy gọi video call cho chúng tôi qua Zalo 0989595533, kỹ thuật viên sẽ nghe tiếng máy và bắt bệnh giúp bạn ngay lập tức!
+                           `;
+                       }
+                   }
+
+                   else if (promptType === 'procedure') {
+                        if (inputData === 'student') {
+                            response = `
+### 🎓 Thủ Tục Cho Sinh Viên
+* **Mức cọc:** 1.000.000 VNĐ - 2.000.000 VNĐ (Tùy loại xe).
+* **Giấy tờ cần thiết:**
+    1. CMND/CCCD gốc.
+    2. Thẻ Sinh Viên (hoặc xác nhận nhập học).
+    3. Bằng lái xe (Chụp ảnh).
+* **Thanh toán:** Chuyển khoản hoặc Tiền mặt.
+* **Ưu đãi:** Giảm 10% khi thuê theo tháng.
+                            `;
+                        } else if (inputData === 'tourist') {
+                            response = `
+### ✈️ Thủ Tục Cho Khách Du Lịch
+* **Mức cọc:**
+    * Xe số: 1.000.000 VNĐ.
+    * Xe ga: 2.000.000 VNĐ.
+* **Giấy tờ:**
+    1. Căn cước công dân hoặc Hộ chiếu (Passport).
+    2. Vé máy bay khứ hồi (nếu có để giảm cọc).
+* **Lưu ý:** Có thể để lại Passport thay tiền cọc.
+                            `;
+                        } else if (inputData === 'luxury') {
+                            response = `
+### 💎 Thủ Tục Thuê Xe SH/Cao Cấp
+* **Mức cọc:** 3.000.000 VNĐ - 5.000.000 VNĐ.
+* **Giấy tờ:**
+    1. CMND/CCCD gắn chip.
+    2. Hộ khẩu hoặc xác minh nơi ở.
+* **Thanh toán:** Thanh toán trước tiền thuê.
+* **Lưu ý:** Kiểm tra kỹ hiện trạng xe trước khi nhận.
+                            `;
+                        } else {
+                            response = `
+### 💼 Thủ Tục Cho Người Đi Làm/Nội Thành
+* **Mức cọc:** 1.500.000 VNĐ - 3.000.000 VNĐ.
+* **Giấy tờ:**
+    1. CCCD gắn chip chính chủ.
+    2. Bằng lái xe.
+* **Thanh toán:** Linh hoạt (Cọc + Tiền thuê).
+* **Hỗ trợ:** Giao xe tận nơi miễn phí bán kính 3km.
+                            `;
+                        }
+                   }
+                   resolve(response);
+               }, delay);
+           });
+       }
+
+       // Feature calls
+       async function handleAIPlan(event) {
+           event.preventDefault();
+           const btn = document.getElementById('btn-generate-plan');
+           const result = document.getElementById('ai-result-plan');
+           const content = document.getElementById('ai-content-plan');
+           const loading = document.getElementById('ai-loading-plan');
+           const days = document.getElementById('ai-days').value;
+           
+           btn.disabled = true; btn.innerText = "⏳ Đang tính...";
+           result.classList.add('hidden'); loading.classList.remove('hidden');
+
+           try {
+               const data = await simulateAIResponse('plan', days);
+               content.innerHTML = DOMPurify.sanitize(marked.parse(data));
+               result.classList.remove('hidden');
+           } catch (e) { alert("Có lỗi xảy ra. Thử lại sau!"); console.error(e); }
+           finally { loading.classList.add('hidden'); btn.disabled = false; btn.innerText = "Tạo Lịch Trình"; }
+       }
+
+       async function handleAIFood(event) {
+           event.preventDefault();
+           const btn = document.getElementById('btn-generate-food');
+           const result = document.getElementById('ai-result-food');
+           const content = document.getElementById('ai-content-food');
+           const loading = document.getElementById('ai-loading-food');
+           const loc = document.getElementById('food-location').value || "";
+           const crave = document.getElementById('food-craving').value || "";
+           const inputCombined = loc + " " + crave;
+           
+           btn.disabled = true; btn.innerText = "⏳ Đang tìm...";
+           result.classList.add('hidden'); loading.classList.remove('hidden');
+           
+           try {
+               const data = await simulateAIResponse('food', inputCombined);
+               content.innerHTML = DOMPurify.sanitize(marked.parse(data));
+               result.classList.remove('hidden');
+           } catch (e) { alert("Có lỗi xảy ra. Thử lại sau!"); }
+           finally { loading.classList.add('hidden'); btn.disabled = false; btn.innerText = "Tìm Quán Ngon"; }
+       }
+
+       async function handleAIMechanic(event) {
+           event.preventDefault();
+           const btn = document.getElementById('btn-generate-mech');
+           const result = document.getElementById('ai-result-mech');
+           const content = document.getElementById('ai-content-mech');
+           const loading = document.getElementById('ai-loading-mech');
+           const symptom = document.getElementById('mech-input').value;
+           if(!symptom) return;
+           
+           btn.disabled = true; btn.innerText = "⏳ Đang kiểm tra...";
+           result.classList.add('hidden'); loading.classList.remove('hidden');
+           
+           try {
+               const data = await simulateAIResponse('mechanic', symptom);
+               content.innerHTML = DOMPurify.sanitize(marked.parse(data));
+               result.classList.remove('hidden');
+           } catch (e) { alert("Có lỗi xảy ra. Thử lại sau!"); }
+           finally { loading.classList.add('hidden'); btn.disabled = false; btn.innerText = "Chẩn Đoán Ngay"; }
+       }
+
+       async function handleAIProcedure(event) {
+           event.preventDefault();
+           const btn = document.getElementById('btn-generate-proc');
+           const result = document.getElementById('ai-result-proc');
+           const content = document.getElementById('ai-content-proc');
+           const loading = document.getElementById('ai-loading-proc');
+           const userType = document.getElementById('proc-input').value;
+           if (!userType) return;
+
+           btn.disabled = true; btn.innerHTML = "⏳ Đang tra cứu...";
+           result.classList.add('hidden'); loading.classList.remove('hidden');
+           
+           try {
+               const data = await simulateAIResponse('procedure', userType);
+               content.innerHTML = DOMPurify.sanitize(marked.parse(data));
+               result.classList.remove('hidden');
+           } catch (e) { 
+               console.error(e);
+               alert("Không thể tra cứu lúc này. Vui lòng thử lại.");
+           }
+           finally { loading.classList.add('hidden'); btn.disabled = false; btn.innerHTML = "Tra Cứu Cọc & Lấy Xe"; }

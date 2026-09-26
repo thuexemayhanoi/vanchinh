@@ -1,0 +1,65 @@
+           <section id="ai-features" class="space-y-6 scroll-mt-24">
+               <div class="flex items-center gap-3">
+                   <span class="text-3xl" aria-hidden="true">🤖</span>
+                   <h2 class="text-3xl font-bold text-gray-900 dark:text-white border-l-4 border-indigo-500 pl-4">Hệ Sinh Thái Trợ Lý AI Du Lịch (Mô Phỏng)</h2>
+               </div>
+               
+               <div class="grid md:grid-cols-2 gap-6">
+                   <div class="glass-panel p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border-t-4 border-purple-500 hover:shadow-xl transition-shadow">
+                       <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2"><span class="text-2xl" aria-hidden="true">✨</span> Lên Lịch Trình Vi Vu</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-1">Bạn chưa biết đi đâu chơi? AI sẽ gợi ý lịch trình phượt Hà Nội cực chất.</p>
+                       <form onsubmit="handleAIPlan(event)" class="space-y-4">
+                           <select id="ai-days" aria-label="Chọn thời gian lịch trình" class="w-full p-2.5 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-purple-500">
+                               <option value="1 ngày">1 Ngày (City Tour Phố Cổ)</option>
+                               <option value="2 ngày 1 đêm">2 Ngày 1 Đêm (Ngoại thành Ba Vì/Sóc Sơn)</option>
+                               <option value="buổi tối">Một buổi tối lượn hồ Tây</option>
+                           </select>
+                           <button type="submit" id="btn-generate-plan" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-md transition-colors text-sm">Tạo Lịch Trình</button>
+                       </form>
+                       <div id="ai-result-plan" class="hidden mt-4 pt-4 border-t border-gray-200/50"><div id="ai-content-plan" class="prose-custom text-xs leading-relaxed max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-gray-700 dark:text-gray-300"></div></div>
+                       <div id="ai-loading-plan" class="hidden mt-4 text-center"><div class="text-purple-500 text-xs animate-pulse font-medium">AI đang lên kế hoạch...</div></div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border-t-4 border-orange-500 hover:shadow-xl transition-shadow">
+                       <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2"><span class="text-2xl" aria-hidden="true">🍜</span> Thổ Địa Ăn Uống</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-1">Tìm quán ngon chuẩn vị địa phương. Bạn đang ở đâu và thèm gì?</p>
+                       <form onsubmit="handleAIFood(event)" class="space-y-4">
+                           <div class="grid grid-cols-2 gap-2">
+                               <input type="text" id="food-location" aria-label="Vị trí hiện tại" placeholder="Vị trí (VD: Phố Cổ)" class="w-full p-2.5 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-orange-500">
+                               <input type="text" id="food-craving" aria-label="Món thèm" placeholder="Món thèm (VD: Phở)" class="w-full p-2.5 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 outline-none text-sm focus:ring-2 focus:ring-orange-500">
+                           </div>
+                           <button type="submit" id="btn-generate-food" class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg shadow-md transition-colors text-sm">Tìm Quán Ngon</button>
+                       </form>
+                       <div id="ai-result-food" class="hidden mt-4 pt-4 border-t border-gray-200/50"><div id="ai-content-food" class="prose-custom text-xs leading-relaxed max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-gray-700 dark:text-gray-300"></div></div>
+                       <div id="ai-loading-food" class="hidden mt-4 text-center"><div class="text-orange-500 text-xs animate-pulse font-medium">AI đang lùng sục quán ngon...</div></div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border-t-4 border-blue-500 hover:shadow-xl transition-shadow bg-blue-50/20 dark:bg-blue-900/10">
+                       <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2"><span class="text-2xl" aria-hidden="true">🔧</span> Bác Sĩ Xe Máy</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-1">Xe có tiếng kêu lạ? Nhập hiện tượng để chẩn đoán nhanh và nhận lời khuyên.</p>
+                       <form onsubmit="handleAIMechanic(event)" class="space-y-4">
+                           <input type="text" id="mech-input" aria-label="Mô tả hiện tượng xe" placeholder="Mô tả (VD: Phanh kêu két két...)" class="w-full p-2.5 rounded-lg bg-white/80 dark:bg-gray-800/80 border border-blue-200 dark:border-blue-800 outline-none text-sm focus:ring-2 focus:ring-blue-500">
+                           <button type="submit" id="btn-generate-mech" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors text-sm">Chẩn Đoán Ngay</button>
+                       </form>
+                       <div id="ai-result-mech" class="hidden mt-4 pt-4 border-t border-gray-200/50"><div id="ai-content-mech" class="prose-custom text-xs leading-relaxed max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-gray-700 dark:text-gray-300"></div></div>
+                       <div id="ai-loading-mech" class="hidden mt-4 text-center"><div class="text-blue-500 text-xs animate-pulse font-medium">AI đang kiểm tra động cơ...</div></div>
+                   </div>
+
+                   <div class="glass-panel p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border-t-4 border-teal-500 hover:shadow-xl transition-shadow bg-teal-50/20 dark:bg-teal-900/10">
+                       <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2"><span class="text-2xl" aria-hidden="true">📋</span> Trợ Lý Thủ Tục</h3>
+                       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-1">Tư vấn thủ tục thuê xe máy và đặt cọc một cách cá nhân hóa.</p>
+                       <form onsubmit="handleAIProcedure(event)" class="space-y-4">
+                           <select id="proc-input" aria-label="Chọn đối tượng thuê" class="w-full p-2.5 rounded-lg bg-white/80 dark:bg-gray-800/80 border border-teal-200 dark:border-teal-800 outline-none text-sm focus:ring-2 focus:ring-teal-500">
+                               <option value="student">Sinh viên (Đi học/Đi làm thêm)</option>
+                               <option value="tourist">Khách du lịch (Trong nước/Quốc tế)</option>
+                               <option value="worker">Người đi làm (Cư trú Nội thành)</option>
+                               <option value="luxury">Thuê dòng xe tay ga SH/Cao cấp</option>
+                           </select>
+                           <button type="submit" id="btn-generate-proc" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg shadow-md transition-colors text-sm">Tra Cứu Cọc & Lấy Xe</button>
+                       </form>
+                       <div id="ai-result-proc" class="hidden mt-4 pt-4 border-t border-gray-200/50"><div id="ai-content-proc" class="prose-custom text-xs leading-relaxed max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-gray-700 dark:text-gray-300"></div></div>
+                       <div id="ai-loading-proc" class="hidden mt-4 text-center"><div class="text-teal-500 text-xs animate-pulse font-medium">Đang kiểm tra hệ thống pháp lý...</div></div>
+                   </div>
+               </div>
+           </section>
+

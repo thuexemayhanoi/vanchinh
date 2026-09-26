@@ -1,0 +1,20 @@
+           <section class="glass-panel bg-gradient-to-r from-brand-600/90 to-indigo-700/90 rounded-2xl p-8 text-center text-white shadow-xl relative overflow-hidden border-none mt-12">
+               <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-20 rounded-full blur-xl"></div>
+               <div class="absolute bottom-0 left-0 -mb-4 -ml-4 w-32 h-32 bg-yellow-400 opacity-20 rounded-full blur-xl"></div>
+               
+               <h2 class="text-2xl md:text-3xl font-bold mb-4 relative z-10">Sẵn Sàng Cầm Lái, Khám Phá Hà Nội Theo Cách Riêng?</h2>
+               <p class="mb-6 text-brand-100 max-w-2xl mx-auto relative z-10 leading-relaxed text-sm md:text-base">
+                   Đừng để những bất tiện về phương tiện giao thông công cộng làm gián đoạn hành trình thưởng ngoạn ẩm thực và văn hóa của bạn tại thủ đô. Hàng ngàn du khách trong và ngoài nước đã hài lòng với dịch vụ chất lượng, tận tâm từ hệ thống <strong>thuê xe máy Văn Chính</strong>. Gọi cho chúng tôi ngay bây giờ để nhận báo giá tốt nhất hôm nay và sở hữu chiếc xe ưng ý nhất!
+               </p>
+               <div class="flex flex-wrap justify-center gap-4 relative z-10 mt-6">
+                   <a href="tel:0989595533" class="bg-white text-brand-700 font-bold py-3.5 px-8 rounded-full shadow-2xl hover:bg-gray-100 hover:shadow-white/50 transition-all hover:-translate-y-1 flex items-center">
+                       <i aria-hidden="true" class="fas fa-phone-volume mr-2 animate-bounce"></i> Gọi Hotline Đặt Xe: 0989.595.533
+                   </a>
+                   <a href="https://zalo.me/0989595533" target="_blank" rel="noopener noreferrer" class="bg-white/20 border-2 border-white text-white font-bold py-3.5 px-8 rounded-full hover:bg-white hover:text-brand-700 transition-colors backdrop-blur-sm flex items-center">
+                       <i aria-hidden="true" class="fas fa-comment-dots mr-2"></i> Nhắn Tin Zalo Nhanh
+                   </a>
+               </div>
+           </section>
+       </article>
+   </main>
+

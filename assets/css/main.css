@@ -1,0 +1,180 @@
+body { font-family: 'Be Vietnam Pro', sans-serif; }
+       
+       /* Glassmorphism Utilities */
+       .glass-panel {
+           background: rgba(255, 255, 255, 0.6);
+           backdrop-filter: blur(12px);
+           -webkit-backdrop-filter: blur(12px);
+           border: 1px solid rgba(255, 255, 255, 0.5);
+           box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+       }
+       
+       .dark .glass-panel {
+           background: rgba(17, 24, 39, 0.6);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+           box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+       }
+
+       /* Apple Ultra Sidebar Style */
+       .ios-sidebar {
+           background: rgba(255, 255, 255, 0.85);
+           backdrop-filter: blur(24px) saturate(180%);
+           -webkit-backdrop-filter: blur(24px) saturate(180%);
+           border-left: 1px solid rgba(0,0,0,0.05);
+       }
+       .dark .ios-sidebar {
+           background: rgba(20, 20, 22, 0.85);
+           border-left: 1px solid rgba(255,255,255,0.05);
+       }
+       
+       .ios-group {
+           background: rgba(255, 255, 255, 0.5);
+           border-radius: 12px;
+           overflow: hidden;
+       }
+       .dark .ios-group {
+           background: rgba(44, 44, 46, 0.5);
+       }
+
+       .ios-item {
+           position: relative;
+           transition: background-color 0.2s;
+       }
+       .ios-item:active {
+           background-color: rgba(0,0,0,0.05);
+       }
+       .dark .ios-item:active {
+           background-color: rgba(255,255,255,0.1);
+       }
+       .ios-item:not(:last-child)::after {
+           content: '';
+           position: absolute;
+           bottom: 0;
+           left: 56px;
+           right: 0;
+           height: 1px;
+           background-color: rgba(0,0,0,0.1);
+       }
+       .dark .ios-item:not(:last-child)::after {
+           background-color: rgba(255,255,255,0.1);
+       }
+
+       .glass-header {
+           background: rgba(255, 255, 255, 0.7);
+           backdrop-filter: blur(16px);
+           -webkit-backdrop-filter: blur(16px);
+           border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+       }
+       .dark .glass-header {
+           background: rgba(17, 24, 39, 0.7);
+           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+       }
+
+       /* ULTRA WIDGET ANIMATIONS */
+       @keyframes ring-shake {
+           0% { transform: rotate(0) scale(1) skew(1deg); }
+           10% { transform: rotate(-25deg) scale(1.1) skew(-1deg); }
+           20% { transform: rotate(25deg) scale(1.1) skew(1deg); }
+           30% { transform: rotate(-25deg) scale(1.1) skew(-1deg); }
+           40% { transform: rotate(25deg) scale(1.1) skew(1deg); }
+           50% { transform: rotate(0) scale(1) skew(1deg); }
+           100% { transform: rotate(0) scale(1) skew(1deg); }
+       }
+
+       .animate-ring-shake {
+           animation: ring-shake 1.2s cubic-bezier(.36,.07,.19,.97) both;
+       }
+
+       .widget-items-wrapper {
+           transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+           opacity: 0;
+           transform: scale(0) translateY(100%);
+           transform-origin: bottom center;
+           pointer-events: none;
+       }
+
+       .widget-container.active .widget-items-wrapper {
+           opacity: 1;
+           transform: scale(1) translateY(0);
+           pointer-events: auto;
+       }
+
+       .sidebar-transition {
+           transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+       }
+       
+       ::-webkit-scrollbar { width: 8px; }
+       ::-webkit-scrollbar-track { background: transparent; }
+       ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 4px; }
+       ::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.8); }
+       
+       .gradient-text {
+           background-clip: text;
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           background-image: linear-gradient(to right, #2563eb, #9333ea);
+       }
+
+       .ambient-bg {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100vw;
+           height: 100vh;
+           z-index: -1;
+           background: radial-gradient(circle at 0% 0%, #e0f2fe 0%, transparent 50%),
+                       radial-gradient(circle at 100% 0%, #f3e8ff 0%, transparent 50%),
+                       radial-gradient(circle at 100% 100%, #fce7f3 0%, transparent 50%),
+                       radial-gradient(circle at 0% 100%, #ecfccb 0%, transparent 50%);
+           opacity: 0.6;
+       }
+       .dark .ambient-bg {
+           background: radial-gradient(circle at 0% 0%, #1e3a8a 0%, transparent 50%),
+                       radial-gradient(circle at 100% 0%, #581c87 0%, transparent 50%),
+                       radial-gradient(circle at 100% 100%, #831843 0%, transparent 50%),
+                       radial-gradient(circle at 0% 100%, #14532d 0%, transparent 50%);
+           opacity: 0.2;
+       }
+       
+       details > summary { list-style: none; }
+       details > summary::-webkit-details-marker { display: none; }
+
+       .prose-custom h3 { font-size: 1.1em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #2563eb; }
+       .dark .prose-custom h3 { color: #60a5fa; }
+       .prose-custom ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+       .prose-custom li { margin-bottom: 0.25em; }
+       .prose-custom strong { font-weight: 600; color: #1f2937; }
+       .dark .prose-custom strong { color: #e5e7eb; }
+
+       .footer-content {
+           max-height: 0;
+           overflow: hidden;
+           transition: max-height 0.3s ease-out;
+       }
+       @media (min-width: 768px) {
+           .footer-content {
+               max-height: none !important;
+               opacity: 1 !important;
+               overflow: visible;
+           }
+       }
+       .footer-chevron {
+           transition: transform 0.3s ease;
+       }
+
+       /* Smooth Accordion Details */
+       details[open] summary ~ * {
+           animation: sweep .3s ease-in-out;
+       }
+       @keyframes sweep {
+           0%    {opacity: 0; margin-top: -10px}
+           100%  {opacity: 1; margin-top: 0px}
+       }
+
+/* Shared content styling (used by content pages) */
+.content-block p { margin-bottom: 1.25rem; line-height: 1.8; font-size: 1.05rem; }
+.content-block p:last-child { margin-bottom: 0; }
+.content-block ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; }
+.content-block li { margin-bottom: 0.5rem; line-height: 1.7; }
+.content-block h2 { font-size: 1.75rem; font-weight: 700; margin: 2rem 0 1rem; }
+.content-block h3 { font-size: 1.35rem; font-weight: 700; margin: 1.5rem 0 0.75rem; }

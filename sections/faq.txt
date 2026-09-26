@@ -1,0 +1,60 @@
+           <section id="faq" class="space-y-6 pt-6">
+               <div class="text-center max-w-3xl mx-auto mb-8">
+                   <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Cẩm Nang & Hỏi Đáp (FAQ)</h2>
+                   <p class="text-gray-600 dark:text-gray-300 mt-2">Hơn cả một dịch vụ thuê xe, Văn Chính gửi đến bạn những "bí kíp" sinh tồn giao thông tại thủ đô.</p>
+               </div>
+               
+               <div class="max-w-3xl mx-auto space-y-4">
+                   <details class="group glass-panel rounded-xl overflow-hidden shadow-sm" open>
+                       <summary class="flex justify-between items-center font-bold cursor-pointer p-5 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-colors list-none outline-none">
+                           <span class="text-gray-900 dark:text-white text-lg"><i aria-hidden="true" class="fas fa-traffic-light mr-3 text-red-500"></i>Văn hóa giao thông & Những khung giờ "tắc đường"?</span>
+                           <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i aria-hidden="true" class="fas fa-chevron-down"></i></span>
+                       </summary>
+                       <div class="text-gray-600 dark:text-gray-300 p-5 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 mt-2 leading-relaxed">
+                           Giao thông Hà Nội rất đặc trưng. Bạn tuyệt đối nên tránh di chuyển vào trung tâm thành phố hoặc các cầu lớn vào khung giờ cao điểm: Sáng từ 7h00 - 8h30 và Chiều tối từ 17h00 - 18h45. Lưu ý, vào tối T6, T7 và CN, khu vực Hồ Gươm cấm phương tiện cơ giới để làm phố đi bộ.
+                       </div>
+                   </details>
+                   
+                   <details class="group glass-panel rounded-xl overflow-hidden shadow-sm">
+                       <summary class="flex justify-between items-center font-bold cursor-pointer p-5 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-colors list-none outline-none">
+                           <span class="text-gray-900 dark:text-white text-lg"><i aria-hidden="true" class="fas fa-id-card mr-3 text-blue-500"></i>Giấy tờ bắt buộc cần cung cấp cho cửa hàng là gì?</span>
+                           <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i aria-hidden="true" class="fas fa-chevron-down"></i></span>
+                       </summary>
+                       <div class="text-gray-600 dark:text-gray-300 p-5 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 mt-2 leading-relaxed">
+                           Chúng tôi áp dụng chính sách cọc nhẹ. Bạn cần bàn giao Bản gốc Chứng minh nhân dân (CMND) hoặc Căn cước công dân (CCCD) gắn chip hợp lệ. Đối với khách nước ngoài, chúng tôi giữ Hộ Chiếu (Passport) gốc. Ngoài ra, bạn cần xuất trình thêm Giấy phép lái xe để đối chiếu.
+                       </div>
+                   </details>
+
+                   <details class="group glass-panel rounded-xl overflow-hidden shadow-sm">
+                       <summary class="flex justify-between items-center font-bold cursor-pointer p-5 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-colors list-none outline-none">
+                           <span class="text-gray-900 dark:text-white text-lg"><i aria-hidden="true" class="fas fa-gas-pump mr-3 text-orange-500"></i>Kinh nghiệm đổ xăng và đỗ xe tại khu vực Phố Cổ?</span>
+                           <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i aria-hidden="true" class="fas fa-chevron-down"></i></span>
+                       </summary>
+                       <div class="text-gray-600 dark:text-gray-300 p-5 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 mt-2 leading-relaxed">
+                           <strong>Về xăng cộ:</strong> Cây xăng ở trung tâm không nhiều. Hai trạm dễ tìm nhất là Cây xăng Trần Quang Khải và Cây xăng Hàng Bún.<br>
+                           <strong>Về đỗ xe:</strong> Tuyệt đối không để xe dưới lòng đường không vạch kẻ hoặc vỉa hè để tránh bị cẩu xe. Hãy gửi vào các bãi trông xe có vé (giá từ 5.000đ - 10.000đ/lượt).
+                       </div>
+                   </details>
+                   
+                   <details class="group glass-panel rounded-xl overflow-hidden shadow-sm">
+                       <summary class="flex justify-between items-center font-bold cursor-pointer p-5 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-colors list-none outline-none">
+                           <span class="text-gray-900 dark:text-white text-lg"><i aria-hidden="true" class="fas fa-road mr-3 text-gray-500"></i>Nên thuê xe ga hay xe số khi đi phượt vùng ven?</span>
+                           <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i aria-hidden="true" class="fas fa-chevron-down"></i></span>
+                       </summary>
+                       <div class="text-gray-600 dark:text-gray-300 p-5 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 mt-2 leading-relaxed">
+                           Nếu đi dạo nội thành, xe tay ga (Vision, Air Blade) là lựa chọn số 1 vì cốp rộng. Nhưng nếu leo núi Vườn Quốc Gia Ba Vì, cắm trại Sóc Sơn hay đi đèo Tam Đảo, chúng tôi đặc biệt khuyến cáo bạn <strong>phải thuê xe số</strong> (Wave, Sirius) để dùng phanh số an toàn tuyệt đối khi đổ đèo.
+                       </div>
+                   </details>
+
+                   <details class="group glass-panel rounded-xl overflow-hidden shadow-sm">
+                       <summary class="flex justify-between items-center font-bold cursor-pointer p-5 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-colors list-none outline-none">
+                           <span class="text-gray-900 dark:text-white text-lg"><i aria-hidden="true" class="fas fa-tools mr-3 text-brand-500"></i>Gặp sự cố trên đường (Xịt lốp, chết máy) xử lý thế nào?</span>
+                           <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i aria-hidden="true" class="fas fa-chevron-down"></i></span>
+                       </summary>
+                       <div class="text-gray-600 dark:text-gray-300 p-5 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 mt-2 leading-relaxed">
+                           Mặc dù xe được bảo dưỡng kỹ, nhưng nếu chẳng may dính đinh thủng lốp, bạn cứ tìm tiệm sửa xe gần nhất vá (giá khoảng 20k-30k). Nếu xe gặp sự cố máy móc nặng không thể di chuyển, hãy dắt vào lề đường và gọi ngay <strong>Hotline: 0989.595.533</strong>. Chúng tôi có đội cơ động trực tuyến 24/7 sẵn sàng mang xe khác đến đổi tận nơi miễn phí cho bạn.
+                       </div>
+                   </details>
+               </div>
+           </section>
+           

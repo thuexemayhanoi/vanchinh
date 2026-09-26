@@ -1,0 +1,43 @@
+           <section id="location" class="space-y-6 pt-6">
+               <div class="max-w-3xl mx-auto glass-panel p-8 rounded-2xl shadow-lg border-t-4 border-brand-500">
+                   <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">Quy Trình Giao Nhận Tốc Độ</h2>
+                   <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Chúng tôi biết thời gian đi du lịch của bạn là vàng bạc. Quên đi những tờ khai giấy lằng nhằng, tại Văn Chính, bạn chỉ mất đúng 5 phút đồng hồ cho toàn bộ quy trình.</p>
+                   
+                   <div class="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 dark:before:via-gray-600 before:to-transparent">
+                       <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                           <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 bg-brand-500 text-white font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">1</div>
+                           <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] glass-panel p-4 rounded-xl shadow-sm">
+                               <h3 class="font-bold text-gray-900 dark:text-white mb-1">Liên hệ & Chốt dòng xe</h3>
+                               <p class="text-sm text-gray-600 dark:text-gray-400">Gọi hoặc nhắn Zalo <span class="font-bold text-brand-600">0989.595.533</span> gửi định vị, chọn xe tay ga hoặc số.</p>
+                           </div>
+                       </div>
+                       
+                       <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                           <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 bg-brand-500 text-white font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">2</div>
+                           <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] glass-panel p-4 rounded-xl shadow-sm">
+                               <h3 class="font-bold text-gray-900 dark:text-white mb-1">Chuẩn bị xe & Giao hàng</h3>
+                               <p class="text-sm text-gray-600 dark:text-gray-400">Thợ test phanh, lốp, rửa sạch và giao xe đến tận nơi cho bạn trong 15 phút.</p>
+                           </div>
+                       </div>
+                       
+                       <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                           <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 bg-brand-500 text-white font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">3</div>
+                           <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] glass-panel p-4 rounded-xl shadow-sm">
+                               <h3 class="font-bold text-gray-900 dark:text-white mb-1">Ký hợp đồng số & Nhận khóa</h3>
+                               <p class="text-sm text-gray-600 dark:text-gray-400">Chụp CCCD/Hộ chiếu gốc làm thủ tục điện tử, thanh toán và nhận khóa lên đường.</p>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="mt-10 p-5 bg-brand-50/50 dark:bg-gray-800/80 rounded-xl border border-brand-200 dark:border-gray-700 text-center shadow-inner">
+                       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2"><i aria-hidden="true" class="fas fa-map-marked-alt mr-2 text-brand-500 animate-pulse"></i>Trạm Dừng Chân Lý Tưởng:</h3>
+                       <p class="text-gray-700 dark:text-gray-300">
+                           Trụ sở chính: <strong>24 Ngõ 5 Nguyễn Văn Cừ, Long Biên</strong>. Cách bến xe Gia Lâm 1km, cách chân cầu Chương Dương 300m. 
+                       </p>
+                       <a href="https://www.google.com/maps/search/?api=1&query=21.0400942,105.8664156" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-brand-600 dark:text-brand-400 font-bold hover:underline">
+                           <i aria-hidden="true" class="fas fa-location-arrow mr-1"></i> Xem chỉ đường trên Google Maps
+                       </a>
+                   </div>
+               </div>
+           </section>
+
