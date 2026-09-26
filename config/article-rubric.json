@@ -1,0 +1,83 @@
+{
+  "rubric_version": "1.0",
+  "word_count": {
+    "unit": "vietnamese_words",
+    "target_min": 1600,
+    "target_max": 2000,
+    "review_min": 1200,
+    "review_max": 2300,
+    "fail_below": 1200,
+    "fail_above": 2300,
+    "weight": 20
+  },
+  "requirements": {
+    "one_primary_intent": {"weight": 10},
+    "exactly_one_h1": {"weight": 10},
+    "unique_title": {"weight": 5},
+    "unique_meta_description": {"weight": 5},
+    "self_canonical": {"weight": 10, "critical": true},
+    "lang_vi": {"weight": 5},
+    "article_jsonld": {"weight": 5},
+    "breadcrumb_jsonld": {"weight": 3},
+    "author_date_metadata": {"weight": 2},
+    "internal_editorial_links": {"min": 3, "max": 5, "weight": 10},
+    "parent_hub_link_required": {"weight": 5, "critical_if_missing": true},
+    "commercial_link_limit": {"max": 1, "weight": 5},
+    "diverse_descriptive_anchors": {"weight": 5},
+    "no_broken_links": {"weight": 0, "critical": true},
+    "no_duplicated_paragraphs": {"weight": 5},
+    "no_invented_business_facts": {"weight": 0, "critical": true},
+    "source_section_when_required": {"weight": 0, "critical_if_missing": true}
+  },
+  "score_bands": {
+    "PASS": {"min": 90, "max": 100, "requires_no_critical_failure": true},
+    "REVIEW": {"min": 80, "max": 89, "requires_no_critical_failure": true},
+    "FAIL": {"min": 0, "max": 79}
+  },
+  "critical_failures": [
+    "incorrect_or_missing_canonical",
+    "file_path_mismatch",
+    "fabricated_price_or_policy",
+    "serious_legal_source_mismatch",
+    "duplicate_or_cannibalized_protected_intent",
+    "broken_required_hub_relationship",
+    "severe_text_corruption",
+    "invalid_state_publication",
+    "forbidden_unsupported_business_claim"
+  ],
+  "forbidden_unsupported_claims": [
+    "cọc 0đ",
+    "cọc 0 đồng",
+    "giao xe 24/7",
+    "hỗ trợ 24/7",
+    "cứu hộ 24/7",
+    "giao xe trong 15 phút",
+    "giao xe miễn phí mọi bán kính",
+    "đơn vị số 1",
+    "dịch vụ số 1",
+    "hàng ngàn khách hàng",
+    "24/24"
+  ],
+  "source_gate": {
+    "requires_primary_source": ["AT", "HD"],
+    "semantic_validation": [
+      "CLAIM -> SUBJECT -> VEHICLE TYPE / PERSON TYPE -> CONDITION -> VALUE / RULE -> EFFECTIVE DATE / VERSION -> PRIMARY SOURCE"
+    ],
+    "critical_source_errors": [
+      "automobile_rule_applied_to_motorcycle_claim",
+      "obsolete_licence_class_presented_as_current",
+      "superseded_law_used_without_context",
+      "incorrect_idp_interpretation",
+      "fabricated_fine_amount",
+      "uncited_current_legal_claim"
+    ],
+    "preferred_source_domains": [
+      "chinhphu.vn", "vanban.chinhphu.vn", "mod.gov.vn", "csdl.vn", "matcdn.gov.vn", "vvr.vn",
+      "xaydung.gov.vn", "giao.thuvienphapluat.vn (secondary, needs primary cross-check)"
+    ]
+  },
+  "repair": {
+    "max_meaningful_attempts": 3,
+    "exceeded_state": "BLOCKED"
+  }
+}

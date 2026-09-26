@@ -1,0 +1,39 @@
+{
+  "canonical_base": "https://thuexemayhanoi.github.io/vanchinh/",
+  "commercial_owners": [
+    {"page": "index.html", "primary_intent": "cho thuê xe máy Hà Nội / Văn Chính brand", "protected_keywords": ["cho thuê xe máy hà nội", "thuê xe máy hà nội", "văn chính"]},
+    {"page": "gioithieu.html", "primary_intent": "about/brand Văn Chính", "protected_keywords": ["giới thiệu văn chính", "về văn chính"]},
+    {"page": "banggia.html", "primary_intent": "bảng giá cho thuê xe máy Hà Nội", "protected_keywords": ["bảng giá thuê xe máy hà nội", "giá thuê xe máy hà nội", "giá thuê xe máy"]},
+    {"page": "lienhe.html", "primary_intent": "liên hệ thuê xe máy Hà Nội", "protected_keywords": ["liên hệ văn chính", "số điện thoại thuê xe máy văn chính"]},
+    {"page": "faq.html", "primary_intent": "câu hỏi thường gặp thuê xe máy Văn Chính", "protected_keywords": ["thuê xe máy hà nội có những câu hỏi nào"]},
+    {"page": "longbien.html", "primary_intent": "cho thuê xe máy Long Biên", "protected_keywords": ["cho thuê xe máy long biên", "thuê xe máy long biên"]},
+    {"page": "gialam.html", "primary_intent": "cho thuê xe máy Gia Lâm", "protected_keywords": ["cho thuê xe máy gia lâm", "thuê xe máy gia lâm"]},
+    {"page": "hoankiem.html", "primary_intent": "cho thuê xe máy Hoàn Kiếm", "protected_keywords": ["cho thuê xe máy hoàn kiếm", "thuê xe máy hoàn kiếm"]},
+    {"page": "phoco.html", "primary_intent": "cho thuê xe máy Phố Cổ", "protected_keywords": ["cho thuê xe máy phố cổ", "thuê xe máy phố cổ hà nội"]},
+    {"page": "badinh.html", "primary_intent": "cho thuê xe máy Ba Đình", "protected_keywords": ["cho thuê xe máy ba đình", "thuê xe máy ba đình"]},
+    {"page": "tayho.html", "primary_intent": "cho thuê xe máy Tây Hồ", "protected_keywords": ["cho thuê xe máy tây hồ", "thuê xe máy tây hồ"]},
+    {"page": "haibatrung.html", "primary_intent": "cho thuê xe máy Hai Bà Trưng", "protected_keywords": ["cho thuê xe máy hai bà trưng", "thuê xe máy hai bà trưng"]},
+    {"page": "xedien.html", "primary_intent": "thuê xe máy điện Hà Nội", "protected_keywords": ["thuê xe máy điện hà nội", "cho thuê xe máy điện"]},
+    {"page": "thuengay.html", "primary_intent": "thuê xe máy theo ngày Hà Nội", "protected_keywords": ["thuê xe máy theo ngày hà nội", "thuê xe máy giá ngày"]},
+    {"page": "thuetuan.html", "primary_intent": "thuê xe máy theo tuần Hà Nội", "protected_keywords": ["thuê xe máy theo tuần hà nội", "thuê xe máy giá tuần"]},
+    {"page": "thuethang.html", "primary_intent": "thuê xe máy theo tháng Hà Nội", "protected_keywords": ["thuê xe máy theo tháng hà nội", "thuê xe máy giá tháng"]},
+    {"page": "thutuc.html", "primary_intent": "thủ tục thuê xe máy", "protected_keywords": ["thủ tục thuê xe máy hà nội", "thuê xe máy cần giấy tờ gì"]},
+    {"page": "chinhsach.html", "primary_intent": "chính sách thuê xe máy Văn Chính", "protected_keywords": ["chính sách thuê xe máy văn chính"]},
+    {"page": "baomat.html", "primary_intent": "chính sách bảo mật Văn Chính", "protected_keywords": ["chính sách bảo mật văn chính"]},
+    {"page": "dieukhoan.html", "primary_intent": "điều khoản thuê xe máy Văn Chính", "protected_keywords": ["điều khoản thuê xe máy văn chính"]}
+  ],
+  "informational_hubs": [
+    {"page": "kinhnghiem.html", "category": "KN"},
+    {"page": "antoan.html", "category": "AT"},
+    {"page": "xemay.html", "category": "XM"},
+    {"page": "dulich.html", "category": "DL"},
+    {"page": "cungduong.html", "category": "CD"},
+    {"page": "hoidap.html", "category": "HD"}
+  ],
+  "rules": [
+    "Articles must NOT target any protected commercial keyword as their primary keyword.",
+    "Do not create multiple near-identical doorway pages for one intent.",
+    "One commercial page = one primary intent; articles link to at most 1 commercial page.",
+    "District rental intents are owned by the district landing pages; articles must use long-tail informational variants."
+  ]
+}

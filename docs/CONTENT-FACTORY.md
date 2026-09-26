@@ -1,0 +1,80 @@
+# Content Factory — vận hành nhà máy 2.000 bài
+
+## Tổng quan
+
+Factory sản xuất 2.000 bài viết tiếng Việt theo lô, deterministic, resumable. WRITER là agent Mistral bên ngoài; tooling chỉ chuẩn bị manifest/state và QA. Không API key, không template giả, không bài spam.
+
+## Matrix
+
+`data/content-matrix.csv` — ĐÚNG 2.000 dòng production, 40 batch × 50 dòng.
+
+Phân bổ category:
+
+| Mã | Category | Số bài |
+|----|----------|--------|
+| KN | Kinh nghiệm | 350 |
+| AT | An toàn | 300 |
+| XM | Xe máy | 350 |
+| DL | Du lịch | 400 |
+| CD | Cung đường | 300 |
+| HD | Hỏi đáp | 300 |
+
+Mỗi dòng: article_id (KN-0001…), batch_id (B01–B40), category, status, primary/secondary keywords, search_intent, working_title, slug, output_path (`cam-nang/<folder>/<id>-<slug>.html`), parent_hub, requires_sources, source_policy, internal_link_targets, commercial_link_target, author, score, quality_status, repair_attempts, published_date, last_checked, notes.
+
+Fixture (`tests/fixtures/`) nằm NGOÀI 2.000 dòng production — không bao giờ đếm vào.
+
+Sinh lại matrix deterministic: `python3 tools/generate_content_matrix.py` (chỉ khi khởi tạo lại; không chạy khi đã có tiến độ production).
+
+## State machine
+
+```
+PLANNED → WRITING → QA → PASS → PUBLISHED
+QA → REVIEW → REPAIR → PASS   (tối đa 3 lần sửa)
+Terminal: FAIL, BLOCKED
+```
+
+- PASS: mọi deterministic gate pass (score ≥ 90, không critical).
+- PUBLISHED: sau khi file bài + hub + sitemap + reports + matrix commit nhất quán trong MỘT transaction.
+- Bài FAIL/BLOCKED không chặn bài PASS khác trong cùng batch.
+
+## Vòng đời một batch (lệnh chuẩn)
+
+Từ repo root, mỗi operator run:
+
+```bash
+python3 scripts/run_article_batch.py progress          # xem trạng thái hiện tại
+python3 scripts/run_article_batch.py plan B01          # manifest 50 dòng của B01
+python3 scripts/run_article_batch.py claim B01         # lock + chuyển WRITING
+# → Mistral viết 50 file bài theo manifest + docs/ARTICLE-RULES.md
+python3 scripts/run_article_batch.py qa B01            # validate + score từng bài
+python3 scripts/run_article_batch.py publish B01       # txn → matrix → sitemap → hubs → progress → xóa marker
+python3 scripts/run_article_batch.py recover           # nếu run bị gián đoạn giữa chừng
+```
+
+Node fallback (Python không khả dụng): `node scripts/validate_content_matrix.mjs`, `node scripts/run_article_batch.mjs plan B01`, `node scripts/run_article_batch.mjs progress`.
+
+## Transaction publish
+
+Marker `data/batches/txn/txn.json` ghi pre-state + planned writes. Trình tự: ghi marker → ghi file → consistency check → xóa marker. Marker pending → mọi mutation khác bị từ chối; chỉ `recover` được chạy.
+
+## Lock
+
+`data/batches/lock.json` — một operator duy nhất được claim/publish tại một thời điểm. Stale lock chỉ được thu hồi sau khi expired và có `FORCE_STALE_LOCK_RECOVERY=1`.
+
+## Reports
+
+- `reports/batches/factory-progress.json` — sinh từ matrix bởi `scripts/run_article_batch.py progress` / `factory_common.write_progress()`. KHÔNG hard-code số liệu.
+- `reports/batches/Bxx.json` — báo cáo từng batch, cumulative, chứa đủ mọi thành viên batch.
+- `reports/audits/` — snapshot audit (xem audit foundation run).
+
+## Hub generation
+
+`scripts/generate_hub_lists.py` đọc matrix, liệt kê bài PUBLISHED của category vào hub tương ứng. Không để hub list drift khỏi matrix; hỗ trợ pagination khi hub dài. Không dồn body hàng trăm bài vào hub.
+
+## Sitemap
+
+`scripts/generate_sitemap.py` chỉ thêm URL bài ở trạng thái PUBLISHED. Không URL PLANNED/WRITING/QA/REVIEW/REPAIR/PASS-chưa-publish/broken. Base: `https://thuexemayhanoi.github.io/vanchinh/`.
+
+## Không trùng lặp liên site
+
+Nội dung phải viết độc lập cho site Văn Chính. Cấm copy/spin từ `thuexemayhanoi/shop`. Tooling và kiến trúc có thể giống; nội dung thì không.

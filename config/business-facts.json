@@ -1,0 +1,85 @@
+{
+  "business_name": "Cho thuê xe máy Hà Nội - Văn Chính",
+  "short_name": "Văn Chính",
+  "public_site": "https://thuexemayhanoi.github.io/vanchinh/",
+  "phone": "0989.595.533",
+  "phone_tel": "0989595533",
+  "phone_e164": "+84989595533",
+  "email": "vanchinhnguyen1702@gmail.com",
+  "zalo": "https://zalo.me/0989595533",
+  "facebook": "https://www.facebook.com/chothuexemay0989595533/",
+  "address": {
+    "address_1": "Số 24 Ngõ 5 Nguyễn Văn Cừ, Ngọc Lâm, Long Biên, Hà Nội",
+    "address_2": "Số 24 Tạ Hiện, Hàng Buồm, Hoàn Kiếm, Hà Nội",
+    "address_2_verified": false
+  },
+  "coordinates": {
+    "latitude": 21.0400942,
+    "longitude": 105.8664156
+  },
+  "opening_hours": {
+    "display": "09:00–17:00 hàng ngày",
+    "opens": "09:00",
+    "closes": "17:00",
+    "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+  },
+  "price_range": "150.000đ - 250.000đ/ngày",
+  "prices": {
+    "currency": "VND",
+    "note": "Giá niêm yết trên site (bảng giá từng dòng xe), có thể thay đổi - luôn xác nhận qua hotline.",
+    "tiers": [
+      {
+        "tier": "xe-so",
+        "name": "Xe số",
+        "examples": ["Wave Alpha", "Sirius"],
+        "day": "150.000đ",
+        "week": "600.000đ - 900.000đ",
+        "month": "800.000đ - 1.200.000đ",
+        "deposit_from": "2.000.000đ"
+      },
+      {
+        "tier": "xe-tay-ga",
+        "name": "Xe tay ga",
+        "examples": ["Vision", "Air Blade"],
+        "day": "180.000đ - 250.000đ",
+        "week": "800.000đ - 1.000.000đ",
+        "month": "1.200.000đ - 1.500.000đ",
+        "deposit_from": "3.000.000đ"
+      },
+      {
+        "tier": "xe-cao-cap",
+        "name": "Xe cao cấp (SH...)",
+        "day": "theo báo giá",
+        "week": "từ 900.000đ",
+        "month": "1.500.000đ - 2.000.000đ",
+        "deposit_from": "5.000.000đ"
+      }
+    ]
+  },
+  "included_with_bike": ["02 mũ bảo hiểm", "02 áo mưa", "1 lít xăng ban đầu"],
+  "deposit_policy": {
+    "summary": "Đặt cọc tiền mặt theo loại xe (từ 2.000.000đ với xe số, cao hơn với xe ga/xe cao cấp) hoặc để lại giấy tờ gốc (CCCD gắn chip / Hộ chiếu) theo thỏa thuận khi nhận xe.",
+    "claim_zero_deposit": false,
+    "verification_notes": "Claim 'cọc 0đ' trên site cũ mâu thuẫn với bảng cọc niêm yết 2-5 triệu đồng. Không dùng lại claim 'cọc 0đ'."
+  },
+  "delivery_policy": {
+    "summary": "Có dịch vụ giao xe tận nơi tại Hà Nội. Thời gian và chi phí giao xe thay đổi theo vị trí - xác nhận qua hotline trước khi đặt.",
+    "guaranteed_15min": false,
+    "guaranteed_free_radius": false,
+    "verification_notes": "Claim 'giao 15 phút', 'miễn phí bán kính 3-5km' không được xác minh. Chỉ mô tả là 'có dịch vụ giao xe, xác nhận khi đặt'."
+  },
+  "insurance_policy": {
+    "summary": "Xe được bảo dưỡng định kỳ trước khi giao. Khách chịu trách nhiệm hư hỏng do lỗi sử dụng. Vá lốp/sửa chữa nhỏ: khách tự xử lý tại tiệm gần nhất, giữ hóa đơn để thỏa thuận. Sự cố nặng: gọi hotline để được hướng dẫn.",
+    "verification_notes": "Không có hợp đồng bảo hiểm chi tiết trong repo - không cam kết bồi thường cụ thể."
+  },
+  "licence_policy": {
+    "summary": "Khách phải có giấy phép lái xe hợp lệ (bằng lái A1 hoặc tương đương) và giấy tờ tùy thân (CCCD gắn chip / Hộ chiếu với khách nước ngoài)."
+  },
+  "rescue_support_policy": {
+    "summary": "Gặp sự cố trên đường: gọi hotline 0989.595.533 trong giờ mở cửa 09:00–17:00 để được hướng dẫn. Ngoài giờ: khách tự xử lý sự cố nhỏ (vá lốp tại tiệm gần nhất) và liên hệ vào buổi sáng hôm sau.",
+    "guaranteed_24_7": false,
+    "verification_notes": "Claim 'cứu hộ 24/7' đã bị gỡ bỏ - không thể cam kết hỗ trợ ngoài giờ mở cửa 09:00-17:00."
+  },
+  "verified_at": "2026-09-26",
+  "verification_notes": "Giờ mở cửa 09:00-17:00 hàng ngày: xác nhận bởi chủ sở hữu (business fact chính thức). Địa chỉ cơ sở 1, hotline, email, tọa độ, giá niêm yết, kèm mũ/áo mưa/1 lít xăng: lấy từ dữ liệu đã công bố trên repo (schema + HTML). Cơ sở 2 Tạ Hiện: chỉ xuất hiện ở footer, chưa xác minh. Mọi claim dạng 'số 1', '24/7', 'cọc 0đ', 'giao 15 phút', 'hàng ngàn khách hàng' đã được gỡ hoặc làm mềm vì không có nguồn xác minh."
+}
