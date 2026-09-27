@@ -1,0 +1,19 @@
+{
+  "article_id": "AT-0043",
+  "word_count": 1630,
+  "seo_score": 93,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3",
+    "break long paragraphs into readable ones"
+  ]
+}
