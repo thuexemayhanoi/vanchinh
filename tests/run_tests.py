@@ -385,8 +385,20 @@ def test_chunked_factory():
         fc.CHECKPOINT = tdp / "writer-checkpoint.json"
         fc.PROGRESS = tdp / "progress.json"
         fc.THROUGHPUT = tdp / "throughput.json"
-        # build temp matrix from production rows (copy)
+        # build temp matrix from production rows (copy), reset statuses to PLANNED
+        # so the fixture is independent of production progress (PLANNED/PUBLISHED).
         rows = prod_rows
+        for x in rows:
+            x["status"] = "PLANNED"
+            x["score"] = ""
+            x["quality_status"] = ""
+            x["repair_attempts"] = "0"
+            x["published_date"] = ""
+            if x["batch_id"] == "B01":
+                # point B01 rows at files that do not exist so the
+                # file-missing QA path is exercised regardless of
+                # production progress (published articles do exist).
+                x["output_path"] = "cam-nang/__test_missing__/" + x["slug"] + ".html"
         with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
             w.writeheader()
