@@ -300,7 +300,10 @@ def test_taxonomy():
         # restore real state
         r = sh(sys.executable, "scripts/generate_hub_lists.py")
         check("hub regen after fixture exit 0", r.returncode == 0)
-        check("orphan listing page removed", not p2.exists())
+        at_real = [r for r in fc.load_matrix()
+                   if r["category"] == "AT" and r["status"] == "PUBLISHED"]
+        check("orphan listing page removed",
+              p2.exists() == (len(at_real) > fc.HUB_PAGE_SIZE))
         hub_html = (ROOT / "antoan.html").read_text(encoding="utf-8")
         at_pub = sorted((r for r in fc.load_matrix()
                          if r["category"] == "AT" and r["status"] == "PUBLISHED"),
