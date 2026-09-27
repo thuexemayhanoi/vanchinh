@@ -214,12 +214,22 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 - Bulk scoring: `scripts/score_chunk.py --batch B01 --limit 10`.
 - Vòng đời: WRITE → quality score → SEO score → REPAIR (max 3) → re-score → publish nếu cả hai gate PASS.
 
+## 21d. Blog/article UX shell (derived UI layer)
+
+- WRITER cam kết file bài BARE (head + đúng một `<article>`); `scripts/build_article_shell.py` bọc MỘI bài PUBLISHED bằng chrome chuẩn site — cùng design language với các trang chính (glass header, sidebar, footer, contact widget, Tailwind CDN, dark mode). Shell là derived state: idempotent (chạy 2 lần byte-identical), deterministic, chạy trong publish transaction.
+- Shell thêm: heading ID deterministic (`sec-<slug>`), mục lục tự sinh từ H2/H3 (desktop sticky rail 240px + mobile `<details>` collapsed, aria-controls, target ≥44px), meta row (author, ngày đăng, reading time), reading-progress bar (tắt với prefers-reduced-motion), sources box ("Nguồn" + dòng kiểm tra pháp lý chỉ khi `last_checked` truthy), back-link parent hub, 3 related card cùng category (deterministic, wrap-around), CTA resolve từ `config/business-facts.json` (không hard-code phone/Zalo/giá).
+- SEO contract giữ nguyên: title, meta description, canonical, Article JSON-LD, BreadcrumbList JSON-LD, prose KHÔNG đổi (verbatim). 0 URL/canonical thay đổi.
+- Content QA (link classification, word count, anchors, paragraphs, sources) chạy trong vùng `<article>` (`factory_common.article_region()`); head/schema check chạy toàn file. Shell không ảnh hưởng điểm QA — đây là scoping chính đáng, không weaken QA.
+- Hub category: card grid 1/2/3 cột (mobile/tablet/desktop), card `<a>` chứa category pill + title + ngày; pagination ← Trước / số (aria-current) / Sau →, crawlable, tối đa 50 link/trang giữ nguyên.
+- Workflow gate: chỉ file bài MỚI THÊM (`--diff-filter=A`) trong cam-nang/ mới kích hoạt claim chunk; sửa bài (shell rebuild/UI/repair) không bao giờ trigger chunk mới.
+- Chi tiết: docs/ARTICLE-RULES.md (§Article shell), docs/CONTENT-FACTORY.md (§Article shell), reports/audits/blog-ux-matrix.md.
+
 ## 22. Exact test commands
 
 Từ repo root:
 
 ```bash
-python3 tests/run_tests.py                 # full suite (>1.600 checks)
+python3 tests/run_tests.py                 # full suite (>3.000 checks)
 python3 scripts/validate_site.py           # HTML/link/canonical/hours/domain
 python3 scripts/validate_content_matrix.py # matrix integrity
 node scripts/validate_content_matrix.mjs   # Node fallback

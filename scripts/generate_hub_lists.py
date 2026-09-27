@@ -23,24 +23,67 @@ HUBS = {"kinhnghiem": "KN", "antoan": "AT", "xemay": "XM",
 sys.path.insert(0, str(fc.ROOT / "tools"))
 
 
-def _list_html(published, page, total_pages, hub_id):
-    items = "\n".join(
-        f'<li class="mb-2"><a href="{r["output_path"]}" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">{r["working_title"]}</a></li>'
-        for r in published)
+def _replace_container(html, hub_id, inner):
+    """Replace the inner HTML of the hub-list container, honoring nested <div>
+    (card grid wrapper) by balancing div tags instead of a non-greedy regex."""
+    open_re = re.compile(r'<div id="hub-list-' + hub_id + r'"[^>]*>')
+    m = open_re.search(html)
+    if not m:
+        return html
+    depth = 1
+    i = m.end()
+    token = re.compile(r"<div\b|</div>")
+    while depth:
+        t = token.search(html, i)
+        if not t:
+            return html  # malformed: leave untouched, caller will report
+        depth += 1 if t.group(0) == "<div" or t.group(0).startswith("<div") else -1
+        i = t.end()
+        if depth == 0:
+            # re-attach the container's own closing </div>
+            return html[:m.end()] + inner + "</div>" + html[i:]
+    return html
+
+
+def _list_html(published, page, total_pages, hub_id, hub_name):
+    """Card grid of article cards. Contract:
+    - <a>-based cards only, NO nested <div> inside the hub-list container
+      (validate_site.py extracts the container with a non-greedy regex).
+    - href set == page-N PUBLISHED articles of this category (matrix truth).
+    - Deterministic order (batch_id, article_id); crawlable pagination links.
+    """
+    def _card(r):
+        date = (f'<span class="block text-xs text-gray-400 dark:text-gray-500 mt-1.5">{r["published_date"]}</span>'
+                if r.get("published_date") else "")
+        return (f'<a href="{r["output_path"]}" class="hub-card group block p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/70 dark:bg-gray-800/60 hover:border-brand-400/70 hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-black/30 transition-all min-h-[44px]">'
+                f'<span class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 mb-2">'
+                f'<i aria-hidden="true" class="fas fa-book-open text-[10px]"></i>{hub_name}</span>'
+                f'<span class="block font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{r["working_title"]}</span>'
+                f'{date}</a>')
+
+    if not published:
+        return ('<p><i aria-hidden="true" class="fas fa-info-circle mr-2 text-brand-500"></i>'
+                'Chưa có bài viết nào trong chuyên mục này. Danh sách sẽ được cập nhật tự động '
+                'khi các bài đạt chuẩn xuất bản.</p>')
+    grid = ('<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">'
+            + "".join(_card(r) for r in published) + "</div>")
     pag = ""
     if total_pages > 1:
         links = []
+        if page > 1:
+            prev_href = f"{hub_id}.html" if page - 1 == 1 else fc.listing_page(hub_id, page - 1)
+            links.append(f'<a href="{prev_href}" class="px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/70 dark:bg-gray-800/60 font-semibold text-gray-700 dark:text-gray-200 hover:border-brand-400/70 transition-colors" aria-label="Trang trước">← Trước</a>')
         for p in range(1, total_pages + 1):
             href = f"{hub_id}.html" if p == 1 else fc.listing_page(hub_id, p)
-            cls = "font-bold underline" if p == page else "hover:underline"
-            links.append(f'<a href="{href}" class="{cls} text-brand-600 dark:text-brand-400">{p}</a>')
-        pag = ('<nav class="mt-6 space-x-3" aria-label="Trang danh mục">'
-               + " ".join(links) + "</nav>")
-    if published:
-        return f'<ul class="space-y-1 list-disc pl-5">{items}</ul>{pag}'
-    return ('<p><i aria-hidden="true" class="fas fa-info-circle mr-2 text-brand-500"></i>'
-            'Chưa có bài viết nào trong chuyên mục này. Danh sách sẽ được cập nhật tự động '
-            'khi các bài đạt chuẩn xuất bản.</p>')
+            if p == page:
+                links.append(f'<span class="px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-lg bg-brand-600 text-white font-bold" aria-current="page">{p}</span>')
+            else:
+                links.append(f'<a href="{href}" class="px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/70 dark:bg-gray-800/60 font-semibold text-gray-700 dark:text-gray-200 hover:border-brand-400/70 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{p}</a>')
+        if page < total_pages:
+            links.append(f'<a href="{fc.listing_page(hub_id, page + 1)}" class="px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/70 dark:bg-gray-800/60 font-semibold text-gray-700 dark:text-gray-200 hover:border-brand-400/70 transition-colors" aria-label="Trang sau">Sau →</a>')
+        pag = ('<nav class="mt-6 flex flex-wrap items-center gap-2" aria-label="Phân trang chuyên mục">'
+               + "".join(links) + "</nav>")
+    return grid + pag
 
 
 def _render_listing_page(hub_id, hub_name, desc, page, total_pages, inner):
@@ -81,15 +124,14 @@ def main():
         total_pages = max(1, -(-len(published) // size))
         # page 1 -> hub page container
         chunk = published[:size]
-        inner = _list_html(chunk, 1, total_pages, hub)
+        inner = _list_html(chunk, 1, total_pages, hub, HUB_NAMES[hub])
         html = page_path.read_text(encoding="utf-8")
-        html = re.sub(r'(<div id="hub-list-' + hub + r'"[^>]*>).*?(</div>)',
-                      lambda m: m.group(1) + inner + m.group(2), html, flags=re.S)
+        html = _replace_container(html, hub, inner)
         page_path.write_text(html, encoding="utf-8")
         # pages 2..N -> generated listing pages
         for p in range(2, total_pages + 1):
             chunk = published[(p - 1) * size:p * size]
-            inner_p = _list_html(chunk, p, total_pages, hub)
+            inner_p = _list_html(chunk, p, total_pages, hub, HUB_NAMES[hub])
             name, html_p = _render_listing_page(hub, HUB_NAMES[hub], HUB_DESCS[hub], p, total_pages, inner_p)
             (fc.ROOT / name).write_text(html_p, encoding="utf-8")
             print(f"listing page {name}: {len(chunk)} articles")

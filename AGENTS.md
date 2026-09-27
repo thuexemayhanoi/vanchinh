@@ -40,6 +40,12 @@ RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA
 - Ghi checkpoint/progress bằng lệnh repo (không tự chế state file).
 - Run kế tiếp bắt đầu bằng read order README §21, không đọc lại lịch sử chat để suy trạng thái.
 
+## Blog UI / article shell
+
+- File bài = bare article (head + đúng một `<article>`); chrome site/TOC/related/CTA là derived state của `scripts/build_article_shell.py`. Sửa UI blog = sửa shell builder/CSS/hub generator, KHÔNG sửa tay từng file bài.
+- Push sửa file bài (shell rebuild, UI work, repair) KHÔNG kích hoạt chunk mới (gate `--diff-filter=A`); chỉ file bài mới thêm mới claim chunk.
+- Shell không được đổi URL/canonical/JSON-LD/prose; CTA phải resolve từ business-facts, không hard-code.
+
 ## Sau mọi thay đổi
 
 - Chạy full gates: `python3 tests/run_tests.py`, `scripts/validate_site.py`, `scripts/validate_content_matrix.py`, `node scripts/validate_content_matrix.mjs`, `scripts/check_matrix_sync.py`, `scripts/check_cannibalization.py`.

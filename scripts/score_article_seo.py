@@ -52,7 +52,12 @@ def score_article_seo(aid, write=True):
                 "sections": {k: 0 for k in WEIGHTS},
                 "issues": ["article file missing"], "recommendations": ["write the article file first"]}
     html = path.read_text(encoding="utf-8")
-    text = _text(html)
+    # Content QA scope: on-page analysis (intro, headings, paragraphs, links,
+    # word count, keyword density) uses the <article> editorial region only,
+    # so site chrome from the article shell cannot change SEO scoring.
+    # Technical/schema checks keep using the full document.
+    region = fc.article_region(html)
+    text = _text(region)
     words = re.findall(r"[A-Za-zÀ-ỹ0-9]+", text)
     wc = len(words)
     pk = _norm(row["primary_keyword"])
@@ -103,7 +108,7 @@ def score_article_seo(aid, write=True):
     title_txt = _norm(m.group(1)) if m else ""
     intro_words = words[:150]
     intro_txt = _norm(" ".join(intro_words))
-    headings = [_norm(h) for h in re.findall(r"<h[23][^>]*>(.*?)</h[23]>", html, flags=re.S)]
+    headings = [_norm(h) for h in re.findall(r"<h[23][^>]*>(.*?)</h[23]>", region, flags=re.S)]
     h1_txt = _norm(" ".join(re.findall(r"<h1[^>]*>(.*?)</h1>", html, flags=re.S)))
     if pk and pk in title_txt:
         sec["intent"] += 5
@@ -124,7 +129,9 @@ def score_article_seo(aid, write=True):
     else:
         recs.append("reflect the primary topic in at least one H2/H3")
     # direct answer in intro: first paragraph after H1 >= 30 words
-    first_p = re.search(r"<h1.*?</h1>\s*<p[^>]*>(.*?)</p>", html, flags=re.S)
+    # first paragraph after the H1 (article shell may place metadata rows
+    # between H1 and the opening paragraph)
+    first_p = re.search(r"<h1.*?</h1>.*?<p[^>]*>(.*?)</p>", region, flags=re.S)
     if first_p and len(re.findall(r"[A-Za-zÀ-ỹ0-9]+", _text(first_p.group(1)))) >= 30:
         sec["intent"] += 5
     else:
@@ -137,13 +144,13 @@ def score_article_seo(aid, write=True):
         issues.append("title competes with a protected commercial intent")
 
     # ---------------- structure (20) ----------------
-    h2 = re.findall(r"<h2[^>]*>", html)
-    h3 = re.findall(r"<h3[^>]*>", html)
+    h2 = re.findall(r"<h2[^>]*>", region)
+    h3 = re.findall(r"<h3[^>]*>", region)
     sec["structure"] += 4 if len(h2) >= 3 else (2 if h2 else 0)
     if len(h2) < 3:
         recs.append("use at least 3 H2 sections")
     sec["structure"] += 3 if len(h3) >= 2 else (1 if h3 else 0)
-    paras = [re.sub(r"<[^>]+>", " ", p) for p in re.findall(r"<p[^>]*>(.*?)</p>", html, flags=re.S)]
+    paras = [re.sub(r"<[^>]+>", " ", p) for p in re.findall(r"<p[^>]*>(.*?)</p>", region, flags=re.S)]
     paras_words = [len(re.findall(r"[A-Za-zÀ-ỹ0-9]+", p)) for p in paras if p.strip()]
     if paras_words:
         avg = sum(paras_words) / len(paras_words)
@@ -163,13 +170,13 @@ def score_article_seo(aid, write=True):
         sec["structure"] += 3
     else:
         issues.append("duplicated paragraph detected")
-    if re.search(r"tóm (lại|lược)|kết luận|tổng kết|điều cốt lõi", html, re.I):
+    if re.search(r"tóm (lại|lược)|kết luận|tổng kết|điều cốt lõi", region, re.I):
         sec["structure"] += 3
     else:
         recs.append("add a summary/conclusion section")
 
     # ---------------- internal linking (15) ----------------
-    local = [h for h in re.findall(r'href="([^"#]+)"', html)
+    local = [h for h in re.findall(r'href="([^"#]+)"', region)
              if not h.startswith(("http", "tel:", "mailto:", "//"))]
     art_dir = path.resolve().parent
     # basename-based classification (articles link hubs as "../../<hub>.html")
@@ -196,7 +203,7 @@ def score_article_seo(aid, write=True):
         sec["internal_links"] += 2
     else:
         issues.append("more than 1 commercial link")
-    anchors = [a.strip() for a in re.findall(r"<a[^>]*>([^<]{2,40})</a>", html)]
+    anchors = [a.strip() for a in re.findall(r"<a[^>]*>([^<]{2,40})</a>", region)]
     if len(anchors) - len(set(anchors)) <= 1:
         sec["internal_links"] += 2
     else:
@@ -236,13 +243,13 @@ def score_article_seo(aid, write=True):
         sec["ai_geo"] += 3
     else:
         recs.append("include a concise direct-answer passage or a question heading")
-    phone = re.findall(r"(?:0\d[\s.\-]?\d{2,3}[\s.\-]?\d{3,4})", html)
-    correct_phone = fc.FACTS["phone"] in html or fc.FACTS.get("phone_e164", "") in html
+    phone = re.findall(r"(?:0\d[\s.\-]?\d{2,3}[\s.\-]?\d{3,4})", region)
+    correct_phone = fc.FACTS["phone"] in region or fc.FACTS.get("phone_e164", "") in region
     if (not phone) or correct_phone:
         sec["ai_geo"] += 2
     else:
         issues.append("phone number in article does not match business facts")
-    if len(re.findall(r"<li[ >]", html)) >= 3:
+    if len(re.findall(r"<li[ >]", region)) >= 3:
         sec["ai_geo"] += 2
     else:
         recs.append("present factual statements as clear lists where useful")

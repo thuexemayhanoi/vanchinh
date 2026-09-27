@@ -31,12 +31,16 @@ def main():
                           "critical": ["file_path_mismatch: article file missing"]}))
         return 0
     html = path.read_text(encoding="utf-8")
+    # Content QA scope: the <article> editorial region only (site chrome from
+    # the article shell must not change article scoring). Head/schema checks
+    # stay on the full document.
+    region = fc.article_region(html)
 
     req = fc.RUBRIC["requirements"]
     score, critical = 0.0, []
 
-    # word count
-    text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S)
+    # word count (article region only)
+    text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", region, flags=re.S)
     text = re.sub(r"<[^>]+>", " ", text)
     wc = len(re.findall(r"[A-Za-zÀ-ỹ0-9]+", text))
     bands = fc.RUBRIC["word_count"]
@@ -65,7 +69,7 @@ def main():
     score += req["breadcrumb_jsonld"]["weight"] if "BreadcrumbList" in html else 0
     score += req["author_date_metadata"]["weight"] if ("author" in html and "datePublished" in html) else 0
 
-    local = [h for h in re.findall(r'href="([^"#]+)"', html)
+    local = [h for h in re.findall(r'href="([^"#]+)"', region)
              if not h.startswith(("http", "tel:", "mailto:", "//"))]
     # Classify links by basename so relative hub links ("../../antoan.html")
     # count as editorial while the broken-link check still resolves full paths.
@@ -94,24 +98,24 @@ def main():
         critical.append(f"commercial links {len(commercial)} > 1")
 
     # no duplicated paragraphs
-    paras = re.findall(r"<p[^>]*>(.*?)</p>", html, flags=re.S)
+    paras = re.findall(r"<p[^>]*>(.*?)</p>", region, flags=re.S)
     paras_n = [" ".join(p.split()) for p in paras if len(p.split()) > 12]
     if len(paras_n) != len(set(paras_n)):
         critical.append("duplicated paragraph detected")
 
-    anchors = re.findall(r"<a[^>]*>([^<]{2,40})</a>", html)
+    anchors = re.findall(r"<a[^>]*>([^<]{2,40})</a>", region)
     if len(anchors) - len(set(a.strip() for a in anchors)) <= 1:
         score += req["diverse_descriptive_anchors"]["weight"]
 
     for claim in fc.RUBRIC["forbidden_unsupported_claims"]:
-        if claim.lower() in html.lower():
+        if claim.lower() in region.lower():
             critical.append(f"forbidden unsupported claim: {claim}")
-    if re.search(r"[\u4e00-\u9fff\u0400-\u04ff\u3040-\u30ff]", html):
+    if re.search(r"[\u4e00-\u9fff\u0400-\u04ff\u3040-\u30ff]", region):
         critical.append("foreign-script corruption")
     for href in set(local):
         if not (art_dir / href).resolve().exists():
             critical.append(f"broken local link: {href}")
-    if row["requires_sources"] == "true" and "nguồn" not in html.lower():
+    if row["requires_sources"] == "true" and "nguồn" not in region.lower():
         critical.append("source section missing (requires_sources=true)")
 
     score = max(0, min(100, score))

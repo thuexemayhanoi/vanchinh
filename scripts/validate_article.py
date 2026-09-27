@@ -57,6 +57,11 @@ def main():
         print(json.dumps({"article_id": aid, "errors": ["file missing"], "critical": ["file_path_mismatch"]}))
         return 1
     html = path.read_text(encoding="utf-8")
+    # Content QA scope: the <article> editorial region only. Site chrome added
+    # by scripts/build_article_shell.py (header/sidebar/footer/TOC/CTA) must
+    # never contaminate link classification, word count or source checks.
+    # Head/schema checks below still run on the full document.
+    region = fc.article_region(html)
 
     if html.count("<h1") != 1:
         critical.append("exactly_one_h1 violated")
@@ -79,12 +84,12 @@ def main():
     if 'rel="author"' not in html and "author" not in html.lower():
         errors.append("author metadata missing")
     art_dir = path.resolve().parent
-    internal = local_targets(html)
+    internal = local_targets(region)
     hub_ok = any(str((art_dir / h).resolve()).endswith(row["parent_hub"]) for h in internal)
     if not hub_ok:
         critical.append("parent hub link missing")
 
-    wc = viet_word_count(html)
+    wc = viet_word_count(region)
     bands = fc.RUBRIC["word_count"]
     if wc < bands["fail_below"] or wc > bands["fail_above"]:
         critical.append(f"word count {wc} out of FAIL band")
@@ -104,17 +109,17 @@ def main():
         critical.append(f"commercial link target mismatch: {bad_targets} != {expected_target}")
 
     for claim in fc.RUBRIC["forbidden_unsupported_claims"]:
-        if claim.lower() in html.lower():
+        if claim.lower() in region.lower():
             critical.append(f"forbidden unsupported claim: {claim}")
 
-    if re.search(r"[\u4e00-\u9fff\u0400-\u04ff\u3040-\u30ff]", html):
+    if re.search(r"[\u4e00-\u9fff\u0400-\u04ff\u3040-\u30ff]", region):
         critical.append("foreign-script corruption (CJK/Cyrillic) detected")
 
     for href in set(internal):
         if not (art_dir / href).resolve().exists():
             critical.append(f"broken local link: {href}")
 
-    if row["requires_sources"] == "true" and "Nguồn" not in html and "nguồn" not in html:
+    if row["requires_sources"] == "true" and "Nguồn" not in region and "nguồn" not in region:
         critical.append("source section missing though requires_sources=true")
 
     result = {"article_id": aid, "path": str(path), "word_count": wc,

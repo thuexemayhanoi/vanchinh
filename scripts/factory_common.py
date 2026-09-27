@@ -5,6 +5,7 @@ import csv
 import json
 import os
 import pathlib
+import re
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -70,6 +71,19 @@ def validate_nav_taxonomy():
     if sorted(seen_cats) != sorted(CATEGORIES.keys()):
         problems.append("navigation groups do not cover exactly the 6 canonical categories")
     return problems
+
+
+def article_region(html):
+    """Return the <article>...</article> editorial region of an article file.
+
+    Content QA (link classification, word count, anchors, paragraphs, sources)
+    runs on this region so site chrome (header/sidebar/footer added by the
+    article shell) never contaminates article scoring. Head/schema checks
+    (title, canonical, JSON-LD) stay on the full document. Bare writer
+    articles contain exactly one <article> so this is a no-op scope there.
+    """
+    m = re.search(r"<article[\s>].*?</article>", html, flags=re.S)
+    return m.group(0) if m else html
 
 
 def listing_page(hub_id, page_number):

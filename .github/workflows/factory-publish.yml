@@ -32,7 +32,10 @@ jobs:
       - name: Gate (proceed only when the push adds new article files)
         id: gate
         run: |
-          NEW_ARTICLES=$(git diff --name-only HEAD~1 HEAD -- cam-nang/ | wc -l)
+          # Only NEWLY ADDED article files start a production chunk. Modified
+          # article files (e.g. article shell rebuilds, UI work, repairs) must
+          # NEVER trigger a new chunk claim.
+          NEW_ARTICLES=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- cam-nang/ | wc -l)
           echo "new article files in this push: $NEW_ARTICLES"
           # Backlog mode: resume when PLANNED rows already have their article
           # files in the repo (e.g. a previous publish pipeline failure).

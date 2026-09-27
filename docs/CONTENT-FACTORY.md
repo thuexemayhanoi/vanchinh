@@ -73,7 +73,7 @@ python3 scripts/run_article_batch.py plan B01          # manifest 50 dòng của
 python3 scripts/run_article_batch.py claim B01         # lock + chuyển WRITING
 # → Mistral viết 50 file bài theo manifest + docs/ARTICLE-RULES.md
 python3 scripts/run_article_batch.py qa B01            # validate + score từng bài
-python3 scripts/run_article_batch.py publish B01       # txn → matrix → sitemap → hubs → progress → xóa marker
+python3 scripts/run_article_batch.py publish B01       # txn → matrix → sitemap → hubs → article shells → progress → xóa marker
 python3 scripts/run_article_batch.py recover           # nếu run bị gián đoạn giữa chừng
 ```
 
@@ -103,11 +103,17 @@ Quy tắc hub & phân trang (taxonomy contract):
 - Mỗi trang hub tối đa `HUB_PAGE_SIZE = 50` link (`factory_common.HUB_PAGE_SIZE`).
 - Vượt 50 bài → sinh listing page `<hub>-trang-<n>.html` (root-level, dùng chung chrome site, canonical riêng, có trong sitemap); trang hub có pagination nav.
 - Bài bị rollback (recover) làm giảm số trang → listing page mồ côi bị XÓA tự động.
+- Hub card dùng `<a>` card (category pill + title + date); container hub-list được thay nội dung bằng balanced-div replacement (`_replace_container`) vì grid card có `<div>` lồng.
+- Pagination có ← Trước / số (aria-current) / Sau →, link crawlable, target ≥44px.
 - Menu/footer chỉ chứa 3 nhóm UI (xem `docs/SEO-OWNERSHIP.md`); KHÔNG đặt link bài viết riêng lẻ vào menu/footer.
 
 ## Publish taxonomy gate
 
 `run_article_batch.py publish` kiểm TRƯỚC khi mutation: mỗi bài thuộc đúng MỘT category hợp lệ, parent hub đúng, mapping nhóm `navigation_groups` hợp lệ (`fc.validate_nav_taxonomy()`). Vi phạm → từ chối publish, không đổi matrix. Sau publish, hub + sitemap + reports được regenerate trong cùng transaction.
+
+## Article shell (derived UI layer)
+
+Mỗi bài PUBLISHED được `scripts/build_article_shell.py` bọc bằng chrome chuẩn site (cùng design language với các trang chính): TOC tự sinh từ H2/H3, meta row, sources box, related cards, CTA từ business-facts. Shell là DERIVED state: chạy trong cùng publish transaction, idempotent (chạy 2 lần ra byte-identical), chỉ xử lý row PUBLISHED. Content QA scope trong vùng `<article>` nên shell không ảnh hưởng điểm QA. Xem docs/ARTICLE-RULES.md.
 
 ## Sitemap
 

@@ -277,7 +277,7 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
             return 1
         plan = {"articles": [{"article_id": r["article_id"], "output_path": r["output_path"],
                               "target_status": "PUBLISHED"} for r in to_publish],
-                "updates": ["content-matrix", "hubs", "sitemap.xml", "reports"]}
+                "updates": ["content-matrix", "hubs", "sitemap.xml", "article-shells", "reports"]}
         fc.begin_txn(plan)
         for r in to_publish:
             r["status"] = "PUBLISHED"
@@ -300,6 +300,21 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
                                   "sitemap_rc": r_sitemap.returncode, "hubs_rc": r_hubs.returncode}))
                 return 1
             print(json.dumps({"error": "publish rollback incomplete: run recover", "batch": batch_id}))
+            return 1
+        # rebuild the article shell UI layer for all PUBLISHED articles
+        # (derived state, deterministic + idempotent, same transaction)
+        r_shell = run(["build_article_shell.py"])
+        if r_shell.returncode != 0:
+            for r in to_publish:
+                r["status"] = "PASS"
+                r["published_date"] = ""
+            fc.save_matrix(rows)
+            run(["generate_sitemap.py"])
+            run(["generate_hub_lists.py"])
+            fc.write_progress()
+            fc.TXN.unlink()
+            print(json.dumps({"error": "publish rolled back: article shell rebuild failed",
+                              "batch": batch_id}))
             return 1
         fc.write_progress()
         fc.finish_txn({"published": len(to_publish), "batch": batch_id})

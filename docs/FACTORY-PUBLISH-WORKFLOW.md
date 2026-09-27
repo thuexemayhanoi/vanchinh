@@ -5,7 +5,7 @@
 ## Vai trò
 
 - WRITER (run Mistral bên ngoài) cam kết file bài viết mới dưới `cam-nang/` lên nhánh `main` (sau khi CI của PR xanh).
-- Workflow tự kích hoạt khi một push lên `main` có file mới trong `cam-nang/`, và chạy toàn bộ tooling chuẩn:
+- Workflow tự kích hoạt khi một push lên `main` THÊM file bài viết MỚI trong `cam-nang/` (`git diff --diff-filter=A`); push chỉ SỬA file bài (article shell rebuild, UI work, repair) KHÔNG bao giờ kích hoạt claim chunk mới. Backlog check (row PLANNED đã có file) giữ nguyên.
 
 1. Bỏ qua nếu push không có file bài viết mới (tránh vòng lặp với commit publish của chính workflow).
 2. Chốt lock/txn sạch trước khi mutate.
@@ -13,7 +13,7 @@
 4. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish. Batch KHÔNG còn hard-code B01.
 5. `claim <active> --limit N`: đúng N row PLANNED -> WRITING, deterministic theo batch_id + article_id (claim từ chối nếu yêu cầu batch khác batch chưa hoàn tất đầu tiên).
 6. `qa <active>`: scoped QA — quality score (rubric 100) + SEO score (0-100) của đúng chunk.
-7. `publish <active>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, checkpoint, reports trong MỘT transaction có marker.
+7. `publish <active>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Shell rebuild thất bại → rollback toàn bộ (row về PASS, marker xóa).
 8. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
 9. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
 
