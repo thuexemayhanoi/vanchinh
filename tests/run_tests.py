@@ -492,6 +492,104 @@ def test_chunked_factory():
     check("checkpoint path contract", fc.CHECKPOINT == ROOT / "data" / "batches" / "writer-checkpoint.json")
 
 
+def test_blog_ui():
+    """Article shell UX regressions (blog-ui): shell marker, TOC, breadcrumb,
+    related cards, CTA from FACTS, hub backlink, idempotent rebuild."""
+    pub = [r for r in fc.load_matrix() if r["status"] == "PUBLISHED"]
+    check("blog-ui: published corpus is 35", len(pub) == 35, str(len(pub)))
+    hubs = sorted(fc.CATEGORIES.values())
+    check("blog-ui: 6 hub containers on site",
+          all((ROOT / h).exists() and f'hub-list-' in (ROOT / h).read_text(encoding="utf-8")
+              for h in hubs))
+    for h in hubs:
+        html = (ROOT / h).read_text(encoding="utf-8")
+        m = re.search(r'id="hub-list-([^"]+)"', html)
+        check(f"blog-ui: {h} has hub-list container",
+              m is not None and m.group(1).replace("-", "").isalpha())
+    # nav/footer must never link individual articles
+    idx = (ROOT / "index.html").read_text(encoding="utf-8")
+    side = re.search(r'<aside id="sidebar-menu".*?</aside>', idx, re.S)
+    foot = re.search(r"<footer.*?</footer>", idx, re.S)
+    check("blog-ui: sidebar has no article links", side and "cam-nang/" not in side.group(0))
+    check("blog-ui: footer has no article links", foot and "cam-nang/" not in foot.group(0))
+    ids = [d for d in re.findall(r'id="([^"]+)"', idx)]
+    check("blog-ui: index ids unique", len(ids) == len(set(ids)))
+
+    for row in pub:
+        aid = row["article_id"]
+        path = ROOT / row["output_path"]
+        html = path.read_text(encoding="utf-8")
+        check(f"blog-ui {aid}: shell marker", "vanchinh article shell v1" in html)
+        check(f"blog-ui {aid}: og:type article",
+              re.search(r'property="og:type" content="article"', html) is not None)
+        check(f"blog-ui {aid}: exactly one h1", html.count("<h1") == 1)
+        check(f"blog-ui {aid}: canonical unchanged",
+              f'rel="canonical" href="{fc.BASE}{row["output_path"]}"' in html)
+        # JSON-LD preserved
+        ld = re.findall(r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', html, re.S)
+        types = [json.loads(x).get("@type") for x in ld]
+        check(f"blog-ui {aid}: Article JSON-LD", "Article" in types)
+        bl = [json.loads(x) for x in ld if json.loads(x).get("@type") == "BreadcrumbList"]
+        check(f"blog-ui {aid}: BreadcrumbList JSON-LD", len(bl) == 1)
+        if bl:
+            items = [e.get("item", "") for e in bl[0]["itemListElement"]]
+            check(f"blog-ui {aid}: breadcrumb links category hub",
+                  fc.BASE + row["parent_hub"] in items and items[0] == fc.BASE)
+        # TOC anchors resolve, no duplicate heading ids
+        toc_hrefs = re.findall(r'class="toc-level-[23]" href="#([^"]+)"', html)
+        dom_ids = re.findall(r'id="([^"]+)"', html)
+        check(f"blog-ui {aid}: toc anchors resolve",
+              toc_hrefs and all(h in dom_ids for h in toc_hrefs))
+        check(f"blog-ui {aid}: no duplicate heading ids",
+              len(dom_ids) == len(set(dom_ids)))
+        # TOC anchors resolve, no duplicate heading ids
+        toc_hrefs = re.findall(r'class="toc-level-[23]" href="#([^"]+)"', html)
+        tocs = re.findall(r'<ol id="toc-(?:mobile|desktop)-list".*?</ol>', html, re.S)
+        check(f"blog-ui {aid}: both toc lists rendered", len(tocs) == 2)
+        dup_free = all(len(hs) == len(set(hs)) for hs in
+                       [re.findall(r'href="#([^"]+)"', t) for t in tocs])
+        check(f"blog-ui {aid}: no duplicate toc entries", dup_free)
+        check(f"blog-ui {aid}: mobile toc == desktop toc",
+              len(tocs) == 2 and
+              re.findall(r'href="#([^"]+)"', tocs[0]) == re.findall(r'href="#([^"]+)"', tocs[1]))
+        check(f"blog-ui {aid}: toc mobile details", 'class="toc-mobile lg:hidden' in html)
+        check(f"blog-ui {aid}: toc desktop rail", 'class="toc-rail hidden lg:block' in html)
+        # breadcrumb trail + hub backlink
+        hub_url = f'../../{row["parent_hub"]}'
+        check(f"blog-ui {aid}: hub backlink", f'class="hub-backlink' in html and f'href="{hub_url}"' in html)
+        # sources box
+        check(f"blog-ui {aid}: sources box aside",
+              re.search(r'<aside class="sources-box"[^>]*aria-label="Nguồn', html) is not None)
+        # CTA strictly from FACTS
+        f = fc.FACTS
+        check(f"blog-ui {aid}: CTA phone from facts", f'href="tel:{f["phone_tel"]}"' in html)
+        check(f"blog-ui {aid}: CTA zalo from facts", f'href="{f["zalo"]}"' in html)
+        # related: 3, no self, no dup, same category, files exist
+        related = re.findall(r'<a class="related-card" href="([^"]+)"', html)
+        check(f"blog-ui {aid}: exactly 3 related", len(related) == 3, str(related))
+        check(f"blog-ui {aid}: no self-related", path.name not in related)
+        check(f"blog-ui {aid}: related unique", len(related) == len(set(related)))
+        cat_files = {pathlib.Path(r["output_path"]).name for r in pub
+                     if r["category"] == row["category"]}
+        check(f"blog-ui {aid}: related same category + exist",
+              all(x in cat_files for x in related))
+        check(f"blog-ui {aid}: reading progress bar", 'id="reading-progress"' in html)
+        check(f"blog-ui {aid}: skip link", "skip-link" in html or "#main" in html)
+    # idempotent rebuild byte-identical
+    before = {r["output_path"]: (ROOT / r["output_path"]).read_bytes() for r in pub}
+    r2 = sh(sys.executable, "scripts/build_article_shell.py")
+    out = json.loads(r2.stdout.strip().splitlines()[-1]) if r2.stdout.strip() else {}
+    check("blog-ui: shell rebuild idempotent",
+          r2.returncode == 0 and out.get("built") == 0 and out.get("unchanged") == 35,
+          r2.stdout[:200])
+    check("blog-ui: rebuild byte-identical",
+          all((ROOT / p).read_bytes() == b for p, b in before.items()))
+    # factory untouched by blog-ui tests
+    rows = fc.load_matrix()
+    check("blog-ui: factory state untouched (2000/35)",
+          len(rows) == 2000 and sum(1 for r in rows if r["status"] == "PUBLISHED") == 35)
+
+
 def test_seo_scorer():
     """SEO scorer: deterministic 0-100; <90 cannot pass; publish gate enforced."""
     import score_article_seo
@@ -557,6 +655,7 @@ def main():
     test_navigation()
     test_chunked_factory()
     test_seo_scorer()
+    test_blog_ui()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")
     if FAIL:
         for f in FAIL[:40]:
