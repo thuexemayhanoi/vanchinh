@@ -275,6 +275,12 @@ def test_taxonomy():
     with tempfile.TemporaryDirectory() as td:
         tm = pathlib.Path(td) / "m.csv"
         rows = [dict(r) for r in fc.load_matrix()]
+        # fixture: normalize AT statuses so exactly HUB_PAGE_SIZE+10 rows end
+        # up PUBLISHED, regardless of how many AT rows are already published
+        # in the real matrix at test time.
+        for r in rows:
+            if r["category"] == "AT":
+                r["status"] = "PLANNED"
         n = 0
         for r in rows:
             if r["category"] == "AT" and n < fc.HUB_PAGE_SIZE + 10:
