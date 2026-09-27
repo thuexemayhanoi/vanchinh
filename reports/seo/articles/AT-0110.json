@@ -1,11 +1,11 @@
 {
-  "article_id": "AT-0102",
-  "word_count": 1452,
-  "seo_score": 91,
+  "article_id": "AT-0110",
+  "word_count": 1700,
+  "seo_score": 96,
   "seo_status": "PASS",
   "sections": {
     "technical": 20,
-    "intent": 18,
+    "intent": 23,
     "structure": 18,
     "internal_links": 15,
     "schema": 10,
@@ -13,7 +13,6 @@
   },
   "issues": [],
   "recommendations": [
-    "reflect the primary topic in at least one H2/H3",
-    "aim for 1600-2000 useful words"
+    "break long paragraphs into readable ones"
   ]
 }

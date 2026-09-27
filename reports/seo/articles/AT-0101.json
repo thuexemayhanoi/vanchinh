@@ -1,16 +1,18 @@
 {
   "article_id": "AT-0101",
-  "word_count": 1708,
-  "seo_score": 98,
+  "word_count": 1689,
+  "seo_score": 96,
   "seo_status": "PASS",
   "sections": {
     "technical": 20,
     "intent": 23,
-    "structure": 20,
+    "structure": 18,
     "internal_links": 15,
     "schema": 10,
     "ai_geo": 10
   },
   "issues": [],
-  "recommendations": []
+  "recommendations": [
+    "break long paragraphs into readable ones"
+  ]
 }
