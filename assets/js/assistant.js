@@ -93,7 +93,7 @@
     if (q.indexOf('kêu') !== -1) {
       return '### ⚠️ Chẩn đoán: Nhông xích khô hoặc bộ nồi\n1. "Lạch cạch" ở hộp xích: tra dầu hoặc tăng xích.\n2. "Gào" khi lên ga: có thể do bộ nồi (côn) mòn.\n3. Đem xe đi kiểm tra tại tiệm tin cậy.';
     }
-    return '### ℹ️ Tư vấn kỹ thuật\nHiện tượng bạn mô tả cần thợ kiểm tra trực tiếp. Bạn có thể chat Zalo ' + FACTS.phone + ' để được hướng dẫn thêm.';
+    return '### ℹ️ Tư vấn kỹ thuật\nHiện tượng bạn mô tả cần thợ kiểm tra trực tiếp. Bạn có thể nhắn qua mục Hỗ Trợ trên trang hoặc gọi hotline ' + FACTS.phone + ' để được hướng dẫn thêm.';
   }
 
   function procedureResponse(userType) {

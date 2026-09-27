@@ -154,6 +154,7 @@ def _nav_groups_from_config():
 # Groups are UI groupings only; the factory keeps 6 canonical categories.
 CAM_NANG_GROUPS = _nav_groups_from_config()
 SUPPORT = [
+    ("Hỗ Trợ", "https://thuexemayhanoi.github.io/aichatbot/", "fas fa-comment-dots", "bg-blue-500"),
     ("Hỏi Đáp", "faq.html", "fas fa-question", "bg-gray-500"),
     ("Thủ Tục Thuê Xe", "thutuc.html", "fas fa-file-alt", "bg-teal-500"),
     ("Bảo Mật", "baomat.html", "fas fa-shield-alt", "bg-rose-500"),
@@ -164,7 +165,8 @@ SUPPORT = [
 
 def _nav_item(label, href, icon, bg, arrow=True):
     arrow_html = f'<i aria-hidden="true" class="fas fa-chevron-right text-gray-400 text-xs"></i>' if arrow else ""
-    return f'''<a href="{href}" class="ios-item flex items-center px-4 py-3.5 text-gray-800 dark:text-white">
+    external = ' target="_blank" rel="noopener noreferrer"' if href.startswith("http") else ""
+    return f'''<a href="{href}"{external} class="ios-item flex items-center px-4 py-3.5 text-gray-800 dark:text-white">
     <div class="w-8 h-8 rounded-lg {bg} flex items-center justify-center text-white mr-3 shadow-sm">
         <i aria-hidden="true" class="{icon} text-sm"></i>
     </div>
@@ -237,7 +239,12 @@ def desktop_nav():
     </ul>
 </div>''')
     nav = "\n".join(items)
-    return f'<nav class="hidden lg:flex items-center gap-1" aria-label="Điều hướng chính" data-desktop-nav>{nav}</nav>'
+    support = (f'<a href="{FACTS["support_url"]}" target="_blank" rel="noopener noreferrer" '
+               f'class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 '
+               f'dark:text-gray-100 hover:bg-white/60 dark:hover:bg-gray-800/60 transition-colors">'
+               f'<i aria-hidden="true" class="fas fa-comment-dots text-xs text-brand-500"></i> '
+               f'{FACTS["support_label"]}</a>')
+    return f'<nav class="hidden lg:flex items-center gap-1" aria-label="Điều hướng chính" data-desktop-nav>{nav}{support}</nav>'
 
 def sidebar():
     area_group = _nav_group("Khu Vực", AREAS, "fas fa-motorcycle", "bg-orange-500", "Chọn Khu Vực")
@@ -317,10 +324,10 @@ def header():
 def contact_widget():
     return f'''<div id="quick-contact-widget" class="fixed left-5 bottom-8 z-[100] flex flex-col items-center gap-4 widget-container group">
     <div class="widget-items-wrapper flex flex-col gap-4 mb-3 pb-2 items-center">
-        <a href="{FACTS['zalo']}" target="_blank" rel="noopener noreferrer"
+        <a href="{FACTS['support_url']}" target="_blank" rel="noopener noreferrer" aria-label="{FACTS['support_label']}"
            class="w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-blue-500/50 shadow-lg hover:scale-110 border-2 border-white/40 backdrop-blur-md relative group/tooltip transition-transform duration-300">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" alt="Zalo" loading="lazy" decoding="async" class="w-8 h-8 filter brightness-0 invert">
-            <span class="absolute left-16 px-3 py-1.5 bg-gray-900/90 text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap backdrop-blur-md border border-white/10">Chat Zalo</span>
+            <i aria-hidden="true" class="fas fa-comment-dots text-xl"></i>
+            <span class="absolute left-16 px-3 py-1.5 bg-gray-900/90 text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap backdrop-blur-md border border-white/10">{FACTS['support_label']}</span>
         </a>
         <a href="https://www.google.com/maps/search/?api=1&query={FACTS['coordinates']['latitude']},{FACTS['coordinates']['longitude']}" target="_blank" rel="noopener noreferrer" aria-label="Chỉ đường Maps"
            class="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-red-500/50 shadow-lg hover:scale-110 border-2 border-white/40 backdrop-blur-md relative group/tooltip transition-transform duration-300">
@@ -342,7 +349,7 @@ def contact_widget():
 def footer():
     def col(title, links):
         lis = "\n".join(
-            f'<li><a href="{h}" class="hover:text-brand-400 transition-colors">{l}</a></li>' for l, h in links
+            f'<li><a href="{h}"{" target=\"_blank\" rel=\"noopener noreferrer\"" if h.startswith("http") else ""} class="hover:text-brand-400 transition-colors">{l}</a></li>' for l, h in links
         )
         return f'''<div class="footer-group border-b border-gray-700 pb-2 md:border-none md:pb-0">
     <h4 class="footer-heading cursor-pointer md:cursor-default flex justify-between items-center text-white font-bold mb-2 md:mb-4">
@@ -355,11 +362,11 @@ def footer():
     for gname, items in CAM_NANG_GROUPS:
         hub_links += f'<li class="pt-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{gname.replace("&", "&amp;")}</li>'
         hub_links += "".join(
-            f'<li><a href="{h}" class="hover:text-brand-400 transition-colors">Cẩm nang {t}</a></li>' for t, h, _ in items
+            f'<li><a href="{h}" class="hover:text-brand-400 transition-colors">{t}</a></li>' for t, h, _ in items
         )
     return f'''<footer class="bg-gray-900/95 text-gray-300 pt-16 pb-8 border-t border-gray-800 backdrop-blur-lg relative z-10">
     <div class="container mx-auto px-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 mb-12">
             <div class="col-span-1 space-y-4 border-b border-gray-700 pb-6 md:border-none md:pb-0">
                 <h3 class="text-2xl font-bold text-white mb-2">Văn Chính<span class="text-brand-500">.</span></h3>
                 <p class="text-sm leading-relaxed text-gray-400">
@@ -382,7 +389,8 @@ def footer():
             </div>
             {col("Về Chúng Tôi", [("Trang Chủ", "index.html"), ("Giới Thiệu", "gioithieu.html"), ("Bảng Giá", "banggia.html"), ("Liên Hệ", "lienhe.html")])}
             {col("Khu Vực Phục Vụ", [(t, h) for t, h, _ in AREAS])}
-            {col("Hình Thức Thuê", [(t, h) for t, h, _ in DURATIONS] + [("Thủ Tục Cần Biết", "thutuc.html"), ("Hỏi Đáp", "faq.html")])}
+            {col("Hình Thức Thuê", [(t, h) for t, h, _ in DURATIONS] + [("Thủ Tục Cần Biết", "thutuc.html")])}
+            {col("Hỗ Trợ", [(FACTS["support_label"], FACTS["support_url"]), ("Hỏi Đáp", "faq.html"), ("Bảo Mật", "baomat.html"), ("Chính Sách", "chinhsach.html")])}
             <div class="footer-group col-span-1 border-b border-gray-700 pb-2 md:border-none md:pb-0">
                 <h4 class="footer-heading cursor-pointer md:cursor-default flex justify-between items-center text-white font-bold mb-2 md:mb-4">
                     Thông Tin Liên Hệ
@@ -513,7 +521,7 @@ def page_h1(title, subtitle, icon="fas fa-motorcycle"):
 def content_block(inner):
     return f'<article class="container mx-auto px-4 py-12 max-w-3xl relative z-10"><div class="content-block text-gray-700 dark:text-gray-300">{inner}</div></article>'
 
-def cta_block(text="Gọi ngay hotline 0989.595.533 hoặc chat Zalo để được tư vấn và giữ xe."):
+def cta_block(text="Gọi ngay hotline 0989.595.533 hoặc nhắn qua Hỗ Trợ để được tư vấn và giữ xe."):
     return f'''<article class="container mx-auto px-4 pb-16 max-w-3xl relative z-10">
     <div class="glass-panel bg-gradient-to-r from-brand-600/90 to-indigo-700/90 rounded-2xl p-8 text-center text-white shadow-xl relative overflow-hidden border-none">
         <h2 class="text-2xl md:text-3xl font-bold mb-3">Sẵn Sàng Chọn Xe Cho Chuyến Đi Của Bạn?</h2>
@@ -627,9 +635,9 @@ PAGES["faq.html"] = dict(
 # ---------------- contact ----------------
 PAGES["lienhe.html"] = dict(
     title="Liên Hệ Văn Chính - Cho Thuê Xe Máy Hà Nội",
-    description="Liên hệ Văn Chính: hotline 0989.595.533, Zalo, email, địa chỉ Số 24 Ngõ 5 Nguyễn Văn Cừ, Ngọc Lâm, Long Biên, Hà Nội. Mở cửa 9h-17h hàng ngày.",
-    content=page_h1("Liên Hệ Văn Chính", "Hotline, Zalo, email và địa chỉ cửa hàng. Giờ mở cửa 9h - 17h hàng ngày.", "fas fa-envelope")
-    + wrap_article(sec("location")) + cta_block("Gọi hoặc chat Zalo để được tư vấn nhanh nhất trong giờ mở cửa."),
+    description="Liên hệ Văn Chính: hotline 0989.595.533, hỗ trợ online, email, địa chỉ Số 24 Ngõ 5 Nguyễn Văn Cừ, Ngọc Lâm, Long Biên, Hà Nội. Mở cửa 9h-17h hàng ngày.",
+    content=page_h1("Liên Hệ Văn Chính", "Hotline, hỗ trợ online, email và địa chỉ cửa hàng. Giờ mở cửa 9h - 17h hàng ngày.", "fas fa-envelope")
+    + wrap_article(sec("location")) + cta_block("Gọi hotline hoặc nhắn qua Hỗ Trợ để được tư vấn nhanh nhất trong giờ mở cửa."),
     jsonld=[localbusiness_schema(), breadcrumb("Liên Hệ", "lienhe.html")],
 )
 
@@ -749,7 +757,7 @@ PAGES["thutuc.html"] = dict(
 <p>Tiền cọc theo loại xe: từ 2.000.000đ (xe số), 3.000.000đ (xe tay ga), 5.000.000đ (xe cao cấp). Hoàn trả đầy đủ khi trả xe đúng hiện trạng. Việc giữ giấy tờ gốc thay tiền cọc chỉ áp dụng khi hai bên thỏa thuận.</p>
 <h2>Quy trình nhận - trả xe</h2>
 <ul>
-<li>Bước 1: Gọi hotline hoặc chat Zalo để chọn xe và thời gian (giờ mở cửa <strong>9h - 17h hàng ngày</strong>).</li>
+<li>Bước 1: Gọi hotline hoặc nhắn qua Hỗ Trợ để chọn xe và thời gian (giờ mở cửa <strong>9h - 17h hàng ngày</strong>).</li>
 <li>Bước 2: Đến cửa hàng hoặc nhận xe giao tận nơi theo thỏa thuận.</li>
 <li>Bước 3: Kiểm tra hiện trạng xe, mũ bảo hiểm, áo mưa; ký nhận xe.</li>
 <li>Bước 4: Trả xe đúng giờ thỏa thuận trong giờ mở cửa; nhận lại cọc sau khi kiểm tra xe.</li>
@@ -790,7 +798,7 @@ PAGES["baomat.html"] = dict(
 </ul>
 <p>Chúng tôi không bán, cho thuê hay chia sẻ thông tin cá nhân của bạn cho bên thứ ba ngoài mục đích nêu trên, trừ khi có yêu cầu của cơ quan có thẩm quyền theo quy định pháp luật.</p>
 <h2>Website</h2>
-<p>Site là trang tĩnh trên GitHub Pages, không có tài khoản người dùng, không dùng cookie theo dõi. Mọi liên hệ diễn ra qua hotline, Zalo hoặc email.</p>
+<p>Site là trang tĩnh trên GitHub Pages, không có tài khoản người dùng, không dùng cookie theo dõi. Mọi liên hệ diễn ra qua hotline, hỗ trợ online hoặc email.</p>
 <h2>Liên hệ</h2>
 <p>Email: vanchinhnguyen1702@gmail.com - Hotline: 0989.595.533 (giờ mở cửa 9h - 17h hàng ngày).</p>'''),
     jsonld=[breadcrumb("Bảo Mật", "baomat.html")],
