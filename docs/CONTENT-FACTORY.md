@@ -57,6 +57,7 @@ Quy tắc:
 - qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái.
 - Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác.
 - PUBLISHED không bao giờ bị claim lại.
+- INVARIANT batch hiện tại: batch đang chạy phải hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch khác batch-chưa-terminal đầu tiên (terminal: PUBLISHED, BLOCKED, FAIL); `next_batch` trong progress report KHÔNG phải quyền claim.
 - Checkpoint `data/batches/writer-checkpoint.json`: schema_version, batch, chunk_size, current_chunk_ids, written_ids, pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, published_ids, last_completed_step, updated_at. MATRIX > CHECKPOINT khi xung đột.
 - Publish gate: quality PASS VÀ SEO >= 90 (`score_article_seo.py`), không critical. SEO 100 không cứu được quality FAIL hay critical.
 - SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.

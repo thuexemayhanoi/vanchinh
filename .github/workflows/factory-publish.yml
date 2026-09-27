@@ -55,31 +55,51 @@ jobs:
         run: |
           test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
           test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }
-      - name: Determine chunk size (pilot 5, then 10)
+      - name: Determine active batch + chunk size (deterministic)
         id: chunk
         if: steps.gate.outputs.proceed == 'true'
         run: |
           set -e
+          BATCH=$(python3 - <<'EOF'
+          import csv
+          TERMINAL = ("PUBLISHED", "BLOCKED", "FAIL")
+          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
+          order = []
+          for r in rows:
+              if r["batch_id"] not in order:
+                  order.append(r["batch_id"])
+          claimable = next((b for b in order
+                           if any(x["status"] not in TERMINAL
+                                  for x in rows if x["batch_id"] == b)), "")
+          print(claimable)
+          EOF
+          )
           PUBLISHED=$(python3 - <<'EOF'
           import csv
           rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
           print(sum(1 for r in rows if r['status'] == 'PUBLISHED'))
           EOF
           )
+          if [ -z "$BATCH" ]; then
+            echo "no unfinished batch -> nothing to claim/publish"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "$PUBLISHED" -eq 0 ]; then LIMIT=5; else LIMIT=10; fi
+          echo "batch=$BATCH" >> "$GITHUB_OUTPUT"
           echo "limit=$LIMIT" >> "$GITHUB_OUTPUT"
-          echo "published=$PUBLISHED -> chunk limit=$LIMIT"
+          echo "active batch=$BATCH, published=$PUBLISHED -> chunk limit=$LIMIT"
       - name: Claim chunk (deterministic, exactly N rows PLANNED->WRITING)
         if: steps.gate.outputs.proceed == 'true'
-        run: python3 scripts/run_article_batch.py claim B01 --limit ${{ steps.chunk.outputs.limit }}
+        run: python3 scripts/run_article_batch.py claim ${{ steps.chunk.outputs.batch }} --limit ${{ steps.chunk.outputs.limit }}
       - name: Scoped QA (quality score + SEO score of the current chunk)
         if: steps.gate.outputs.proceed == 'true'
-        run: python3 scripts/run_article_batch.py qa B01
+        run: python3 scripts/run_article_batch.py qa ${{ steps.chunk.outputs.batch }}
       - name: Grouped transactional publish (quality PASS AND SEO >= 90)
         id: publish
         if: steps.gate.outputs.proceed == 'true'
         continue-on-error: true
-        run: python3 scripts/run_article_batch.py publish B01
+        run: python3 scripts/run_article_batch.py publish ${{ steps.chunk.outputs.batch }}
       - name: Full test suite (pre-push gate)
         if: steps.gate.outputs.proceed == 'true'
         run: python3 tests/run_tests.py
@@ -98,7 +118,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "no state changes to commit"
           else
-            git commit -m "factory: B01 chunk publish (limit ${{ steps.chunk.outputs.limit }}) [automated txn]"
+            git commit -m "factory: ${{ steps.chunk.outputs.batch }} chunk publish (limit ${{ steps.chunk.outputs.limit }}) [automated txn]"
             git push
           fi
       - name: Assert clean factory state

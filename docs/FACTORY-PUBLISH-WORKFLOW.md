@@ -10,11 +10,12 @@
 1. Bỏ qua nếu push không có file bài viết mới (tránh vòng lặp với commit publish của chính workflow).
 2. Chốt lock/txn sạch trước khi mutate.
 3. Chunk size: 5 bài cho pilot (khi 0 bài PUBLISHED), 10 bài cho các chunk sau (theo hợp đồng README §21c).
-4. `claim B01 --limit N`: đúng N row PLANNED -> WRITING, deterministic theo batch_id + article_id.
-5. `qa B01`: scoped QA — quality score (rubric 100) + SEO score (0-100) của đúng chunk.
-6. `publish B01`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, checkpoint, reports trong MỘT transaction có marker.
-7. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
-8. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
+4. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish. Batch KHÔNG còn hard-code B01.
+5. `claim <active> --limit N`: đúng N row PLANNED -> WRITING, deterministic theo batch_id + article_id (claim từ chối nếu yêu cầu batch khác batch chưa hoàn tất đầu tiên).
+6. `qa <active>`: scoped QA — quality score (rubric 100) + SEO score (0-100) của đúng chunk.
+7. `publish <active>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, checkpoint, reports trong MỘT transaction có marker.
+8. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
+9. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
 
 ## Quy tắc an toàn
 

@@ -37,7 +37,7 @@ Stale lock: chỉ khi expired theo thời gian, và phải set `FORCE_STALE_LOCK
 ## Resume
 
 - Trạng thái repo (matrix + reports + markers) là chuẩn, KHÔNG phải trí nhớ hội thoại.
-- Run trước claim 50, xong 30 → hoàn tất 30 còn lại trước khi claim batch mới.
+- Run trước claim 50, xong 30 → hoàn tất 30 còn lại trước khi claim batch mới. Batch mới chỉ được claim khi batch trước đã terminal toàn bộ row (PUBLISHED, BLOCKED, FAIL).
 - Không vứt partial work; không tự đếm lại từ đầu.
 
 ## Quy trình chuẩn sau gián đoạn

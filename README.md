@@ -204,8 +204,9 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 
 ## 21c. Content factory chunked mode
 
-- Batch vẫn 50 bài; writer làm việc theo CHUNK: pilot 5 bài, sau khi pilot xanh mặc định chunk 10 bài (max 10/chunk).
+- Batch vẫn 50 bài; writer làm việc theo CHUNK: pilot 5 bài, sau khi pilot xanh mặc định chunk 10 bài (max 10/chunk). Batch ≠ chunk: 40 batch × 50 bài = 2.000 dòng matrix.
 - Lệnh: `claim B01 --limit N` (claim đúng N row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA chỉ chunk hiện tại), `publish B01` (grouped publish PASS của chunk hiện tại).
+- Invariant batch hiện tại: batch đang chạy PHẢI hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch ≠ batch chưa hoàn thành đầu tiên (theo thứ tự matrix). Trạng thái terminal cho phép chuyển batch: PUBLISHED, BLOCKED, FAIL. Hệ quả: không bao giờ nhảy sang B02 khi B01 còn row chưa terminal; `next_batch` trong progress report CHỈ là batch kế tiếp chưa có bài published, KHÔNG phải quyền claim.
 - Publish yêu cầu: quality PASS VÀ SEO score >= 90 VÀ không critical.
 - Checkpoint: `data/batches/writer-checkpoint.json` (operational state; MATRIX > CHECKPOINT khi conflict).
 - Throughput: `reports/batches/factory-throughput.json` (số thật, không ước lượng).
@@ -261,4 +262,17 @@ Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker)
 - [docs/BUSINESS-FACTS.md](docs/BUSINESS-FACTS.md) — fact kinh doanh + quy tắc xác minh
 - [docs/RECOVERY.md](docs/RECOVERY.md) — transaction/lock/resume
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit trước push
-- [reports/audits/audit-2026-09-26.md](reports/audits/audit-2026-09-26.md) — audit foundation run
+- [reports/audits/audit-2026-09-26.md](reports/audits/audit-2026-09-26.md) — audit foundation run- [docs/BUSINESS-FACTS.md](docs/BUSINESS-FACTS.md) — fact kinh doanh
+- [docs/RECOVERY.md](docs/RECOVERY.md) — transaction, lock, resume
+- [docs/FACTORY-PUBLISH-WORKFLOW.md](docs/FACTORY-PUBLISH-WORKFLOW.md) — publish tự động
+- [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit
+- [AGENTS.md](AGENTS.md) — hợp đồng thực thi cho AI agent
+
+## 26. Tiến độ hiện tại
+
+KHÔNG hard-code số liệu tiến độ vào tài liệu. Số liệu authoritative luôn nằm ở `reports/batches/factory-progress.json` (sinh từ matrix) và `data/content-matrix.csv`. Lấy snapshot bằng:
+
+```bash
+python3 scripts/run_article_batch.py progress
+python3 scripts/run_article_batch.py plan B01
+```

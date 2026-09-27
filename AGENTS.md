@@ -1,0 +1,47 @@
+# AGENTS.md — Hợp đồng thực thi cho AI agent (vanchinh)
+
+Hợp đồng ngắn gọn, bắt buộc với mọi AI agent làm việc trên repo này. Chi tiết vận hành: README.md và docs/. Khi mâu thuẫn: repository truth thắng mọi tài liệu; khi tài liệu mâu thuẫn nhau, README.md là chuẩn.
+
+## Nguyên tắc tuyệt đối
+
+- REPOSITORY TRUTH > MEMORY > OLD REPORTS. Không bao giờ tin trí nhớ hội thoại thay vì file trong repo.
+- Không bao giờ restart factory, không reset matrix, không đếm lại từ đầu.
+- Không bao giờ rewrite bài PUBLISHED nếu không có lỗi đã kiểm chứng kèm lý do repair rõ ràng.
+- Không bao giờ tái sinh matrix destructive (chạy generator toàn bộ) khi đã có tiến độ production.
+- Không bao giờ force push.
+- Không bao giờ weaken QA, tắt test, bỏ matrix validation hay bypass PASS gate để lấy kết quả xanh.
+- Test KHÔNG BAO GIỜ được mutate production state (matrix, checkpoint, lock, txn). Fixture phải dùng env `CONTENT_MATRIX` / `WRITER_CHECKPOINT` trỏ thư mục tạm.
+
+## Batch / chunk
+
+- Batch = 50 bài (B01–B40, tổng 2.000). Writer chunk = 5 bài pilot, sau đó 10 bài (max 10). Batch ≠ chunk.
+- INVARIANT: batch hiện tại chưa hoàn tất PHẢI hoàn tất trước. `claim` từ chối batch khác batch-chưa-hoàn-thành đầu tiên. KHÔNG bao giờ nhảy sang B02 khi B01 còn row chưa terminal. Terminal: PUBLISHED, BLOCKED, FAIL. `next_batch` trong progress report không phải quyền claim.
+- Thứ tự deterministic: batch_id + article_id. PUBLISHED không bao giờ bị claim lại.
+
+## Trước khi làm việc
+
+1. Fetch fresh main, đọc README.md, docs/CONTENT-FACTORY.md, docs/ARTICLE-RULES.md, docs/SEO-OWNERSHIP.md.
+2. Kiểm: `data/batches/txn/txn.json` (pending transaction), `data/batches/lock.json` (lock), `data/batches/writer-checkpoint.json`, `data/content-matrix.csv`, `reports/batches/factory-progress.json`, workflow đang chạy trên remote.
+3. Marker txn tồn tại → chạy `python3 scripts/run_article_batch.py recover` TRƯỚC mọi mutation.
+
+## Thứ tự ưu tiên khi resume
+
+RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA → PUBLISH PASS → CLAIM WORK MỚI.
+
+## Phân vai
+
+- AI bên ngoài (Mistral run) viết prose — file bài viết HTML thật dưới `cam-nang/`, theo docs/ARTICLE-RULES.md và rubric.
+- Tooling deterministic trong repo (GitHub Actions, scripts Python/Node) validate và publish. Không AI trong Actions, không API key.
+- Publish yêu cầu: quality PASS VÀ SEO >= 90, không critical. Fail là fail.
+
+## Nếu bị gián đoạn
+
+- Giữ nguyên mọi partial work hợp lệ; trạng thái repo là điểm resume duy nhất.
+- Ghi checkpoint/progress bằng lệnh repo (không tự chế state file).
+- Run kế tiếp bắt đầu bằng read order README §21, không đọc lại lịch sử chat để suy trạng thái.
+
+## Sau mọi thay đổi
+
+- Chạy full gates: `python3 tests/run_tests.py`, `scripts/validate_site.py`, `scripts/validate_content_matrix.py`, `node scripts/validate_content_matrix.mjs`, `scripts/check_matrix_sync.py`, `scripts/check_cannibalization.py`.
+- Không push khi test đỏ. Sau push: verify remote HEAD và CI của đúng SHA mới.
+- Không claim SUCCESS/FIXED/PUBLISHED khi chưa kiểm chứng độc lập.

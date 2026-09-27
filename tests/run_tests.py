@@ -426,6 +426,15 @@ def test_chunked_factory():
             cp = fc.read_checkpoint()
             check("checkpoint records current chunk", sorted(cp["current_chunk_ids"]) == sorted(x["article_id"] for x in writing))
             check("checkpoint schema v1", cp["schema_version"] == "1")
+            # invariant: cannot claim another batch while the current batch is unfinished
+            r_b02 = sh_env(sys.executable, "scripts/run_article_batch.py", "claim", "B02", "--limit", "5")
+            check("claim B02 refused while B01 unfinished", r_b02.returncode == 1, r_b02.stdout[-200:])
+            j_b02 = json.loads(r_b02.stdout)
+            check("refusal names claimable batch", j_b02.get("claimable_batch") == "B01", r_b02.stdout[-200:])
+            rows = fc.load_matrix()
+            check("refused claim mutated nothing",
+                  all(x["status"] == "PLANNED" for x in rows if x["batch_id"] == "B02"))
+            check("refused claim keeps B01 chunk", len([x for x in rows if x["batch_id"] == "B01" and x["status"] == "WRITING"]) == 5)
             # scoped QA of the current chunk (files missing -> REPAIR/BLOCKED for chunk only)
             r = sh_env(sys.executable, "scripts/run_article_batch.py", "qa", "B01", "--limit", "5")
             j = json.loads(r.stdout)

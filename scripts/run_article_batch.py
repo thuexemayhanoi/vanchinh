@@ -90,10 +90,33 @@ def _select_claim_rows(br, limit, ids, cp):
     return resumed + [r for r in fresh if r not in resumed]
 
 
+def _claimable_batch(rows):
+    """First batch (deterministic matrix order) that still has non-terminal rows.
+
+    Terminal production states: PUBLISHED, BLOCKED, FAIL. The current
+    unfinished batch MUST finish first: claiming any other batch is refused.
+    Returns None when every row is terminal (factory idle)."""
+    order = []
+    for r in rows:
+        if r["batch_id"] not in order:
+            order.append(r["batch_id"])
+    for b in order:
+        if any(r["status"] not in ("PUBLISHED", "BLOCKED", "FAIL")
+               for r in rows if r["batch_id"] == b):
+            return b
+    return None
+
+
 def cmd_claim(batch_id, limit=None, ids=None):
     fc.acquire_lock(operator=f"batch-{batch_id}")
     try:
         rows = fc.load_matrix()
+        # Invariant: the current unfinished batch must finish first.
+        claimable = _claimable_batch(rows)
+        if claimable is not None and claimable != batch_id:
+            print(json.dumps({"error": "refusing claim: current unfinished batch must finish first",
+                              "claimable_batch": claimable, "requested_batch": batch_id}))
+            return 1
         br = batch_rows(rows, batch_id)
         cp = fc.read_checkpoint()
         sel = _select_claim_rows(br, limit, ids, cp)
