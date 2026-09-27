@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "batch": "B01",
+  "chunk_size": 5,
+  "current_chunk_ids": [],
+  "written_ids": [
+    "AT-0001",
+    "AT-0002",
+    "AT-0003",
+    "AT-0004",
+    "AT-0005"
+  ],
+  "pending_qa_ids": [],
+  "pending_repair_ids": [],
+  "pass_ids": [],
+  "pending_publish_ids": [],
+  "published_ids": [
+    "AT-0001",
+    "AT-0002",
+    "AT-0003",
+    "AT-0004",
+    "AT-0005"
+  ],
+  "last_completed_step": "publish",
+  "started_at": "2026-09-27T02:08:31Z",
+  "updated_at": "2026-09-27T02:08:32Z",
+  "chunks_completed": 1,
+  "publish_operations": 1
+}
