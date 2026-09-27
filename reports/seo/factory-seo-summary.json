@@ -1,9 +1,9 @@
 {
-  "articles_scored": 45,
-  "average_score": 97.8,
+  "articles_scored": 50,
+  "average_score": 97.7,
   "min_score": 93,
   "max_score": 100,
-  "pass": 45,
+  "pass": 50,
   "review": 0,
   "fail": 0,
   "top_common_issues": []
