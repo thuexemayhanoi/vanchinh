@@ -1,18 +1,19 @@
 {
-  "article_id": "AT-0134",
-  "word_count": 1346,
-  "seo_score": 96,
+  "article_id": "AT-0138",
+  "word_count": 1358,
+  "seo_score": 94,
   "seo_status": "PASS",
   "sections": {
     "technical": 20,
     "intent": 23,
-    "structure": 18,
+    "structure": 16,
     "internal_links": 15,
     "schema": 10,
     "ai_geo": 10
   },
   "issues": [],
   "recommendations": [
+    "break long paragraphs into readable ones",
     "aim for 1600-2000 useful words"
   ]
 }
