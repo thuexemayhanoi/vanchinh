@@ -3,11 +3,11 @@
   "chunk_size": 10,
   "chunks_completed": 17,
   "written": 140,
-  "quality_pass": 135,
-  "seo_pass": 135,
-  "published": 135,
-  "repair_count": 5,
+  "quality_pass": 140,
+  "seo_pass": 140,
+  "published": 140,
+  "repair_count": 0,
   "publish_operations": 17,
-  "elapsed_minutes": 1025.6,
-  "effective_articles_per_hour": 7.9
+  "elapsed_minutes": 1024.2,
+  "effective_articles_per_hour": 8.2
 }
