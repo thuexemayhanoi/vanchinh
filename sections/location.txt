@@ -8,7 +8,7 @@
                            <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 bg-brand-500 text-white font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">1</div>
                            <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] glass-panel p-4 rounded-xl shadow-sm">
                                <h3 class="font-bold text-gray-900 dark:text-white mb-1">Liên hệ & Chốt dòng xe</h3>
-                               <p class="text-sm text-gray-600 dark:text-gray-400">Gọi hoặc nhắn Zalo <span class="font-bold text-brand-600">0989.595.533</span> gửi định vị, chọn xe tay ga hoặc số.</p>
+                               <p class="text-sm text-gray-600 dark:text-gray-400">Gọi <span class="font-bold text-brand-600">0989.595.533</span> hoặc nhắn qua <a href="https://thuexemayhanoi.github.io/aichatbot/" target="_blank" rel="noopener noreferrer" class="font-bold text-brand-600 underline">Hỗ Trợ</a> để gửi định vị, chọn xe tay ga hoặc số.</p>
                            </div>
                        </div>
                        

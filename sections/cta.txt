@@ -10,8 +10,8 @@
                    <a href="tel:0989595533" class="bg-white text-brand-700 font-bold py-3.5 px-8 rounded-full shadow-2xl hover:bg-gray-100 hover:shadow-white/50 transition-all hover:-translate-y-1 flex items-center">
                        <i aria-hidden="true" class="fas fa-phone-volume mr-2 animate-bounce"></i> Gọi Hotline Đặt Xe: 0989.595.533
                    </a>
-                   <a href="https://zalo.me/0989595533" target="_blank" rel="noopener noreferrer" class="bg-white/20 border-2 border-white text-white font-bold py-3.5 px-8 rounded-full hover:bg-white hover:text-brand-700 transition-colors backdrop-blur-sm flex items-center">
-                       <i aria-hidden="true" class="fas fa-comment-dots mr-2"></i> Nhắn Tin Zalo Nhanh
+                   <a href="https://thuexemayhanoi.github.io/aichatbot/" target="_blank" rel="noopener noreferrer" class="bg-white/20 border-2 border-white text-white font-bold py-3.5 px-8 rounded-full hover:bg-white hover:text-brand-700 transition-colors backdrop-blur-sm flex items-center">
+                       <i aria-hidden="true" class="fas fa-comment-dots mr-2"></i> Nhắn Hỗ Trợ Nhanh
                    </a>
                </div>
            </section>

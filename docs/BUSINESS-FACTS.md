@@ -6,7 +6,8 @@ Source of truth: `config/business-facts.json`. Không bịa fact. Site và assis
 
 - business_name: Thuê xe máy Văn Chính
 - public_site: https://thuexemayhanoi.github.io/vanchinh/
-- phone: 0989.595.533 (hotline + Zalo)
+- phone: 0989.595.533 (hotline)
+- support_url: https://thuexemayhanoi.github.io/aichatbot/ (Hỗ Trợ, agent online)
 - email: vanchinhnguyen1702@gmail.com
 - address: Số 24 Ngõ 5 Nguyễn Văn Cừ, Ngọc Lâm, Long Biên, Hà Nội
 - coordinates: 21.0400942, 105.8664156

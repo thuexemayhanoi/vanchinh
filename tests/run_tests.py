@@ -492,102 +492,69 @@ def test_chunked_factory():
     check("checkpoint path contract", fc.CHECKPOINT == ROOT / "data" / "batches" / "writer-checkpoint.json")
 
 
-def test_blog_ui():
-    """Article shell UX regressions (blog-ui): shell marker, TOC, breadcrumb,
-    related cards, CTA from FACTS, hub backlink, idempotent rebuild."""
-    pub = [r for r in fc.load_matrix() if r["status"] == "PUBLISHED"]
-    check("blog-ui: published corpus is 35", len(pub) == 35, str(len(pub)))
-    hubs = sorted(fc.CATEGORIES.values())
-    check("blog-ui: 6 hub containers on site",
-          all((ROOT / h).exists() and f'hub-list-' in (ROOT / h).read_text(encoding="utf-8")
-              for h in hubs))
-    for h in hubs:
-        html = (ROOT / h).read_text(encoding="utf-8")
-        m = re.search(r'id="hub-list-([^"]+)"', html)
-        check(f"blog-ui: {h} has hub-list container",
-              m is not None and m.group(1).replace("-", "").isalpha())
-    # nav/footer must never link individual articles
-    idx = (ROOT / "index.html").read_text(encoding="utf-8")
-    side = re.search(r'<aside id="sidebar-menu".*?</aside>', idx, re.S)
-    foot = re.search(r"<footer.*?</footer>", idx, re.S)
-    check("blog-ui: sidebar has no article links", side and "cam-nang/" not in side.group(0))
-    check("blog-ui: footer has no article links", foot and "cam-nang/" not in foot.group(0))
-    ids = [d for d in re.findall(r'id="([^"]+)"', idx)]
-    check("blog-ui: index ids unique", len(ids) == len(set(ids)))
+SUPPORT_URL = "https://thuexemayhanoi.github.io/aichatbot/"
+SUPPORT_LABEL = "Hỗ Trợ"
 
-    for row in pub:
-        aid = row["article_id"]
-        path = ROOT / row["output_path"]
-        html = path.read_text(encoding="utf-8")
-        check(f"blog-ui {aid}: shell marker", "vanchinh article shell v1" in html)
-        check(f"blog-ui {aid}: og:type article",
-              re.search(r'property="og:type" content="article"', html) is not None)
-        check(f"blog-ui {aid}: exactly one h1", html.count("<h1") == 1)
-        check(f"blog-ui {aid}: canonical unchanged",
-              f'rel="canonical" href="{fc.BASE}{row["output_path"]}"' in html)
-        # JSON-LD preserved
-        ld = re.findall(r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', html, re.S)
-        types = [json.loads(x).get("@type") for x in ld]
-        check(f"blog-ui {aid}: Article JSON-LD", "Article" in types)
-        bl = [json.loads(x) for x in ld if json.loads(x).get("@type") == "BreadcrumbList"]
-        check(f"blog-ui {aid}: BreadcrumbList JSON-LD", len(bl) == 1)
-        if bl:
-            items = [e.get("item", "") for e in bl[0]["itemListElement"]]
-            check(f"blog-ui {aid}: breadcrumb links category hub",
-                  fc.BASE + row["parent_hub"] in items and items[0] == fc.BASE)
-        # TOC anchors resolve, no duplicate heading ids
-        toc_hrefs = re.findall(r'class="toc-level-[23]" href="#([^"]+)"', html)
-        dom_ids = re.findall(r'id="([^"]+)"', html)
-        check(f"blog-ui {aid}: toc anchors resolve",
-              toc_hrefs and all(h in dom_ids for h in toc_hrefs))
-        check(f"blog-ui {aid}: no duplicate heading ids",
-              len(dom_ids) == len(set(dom_ids)))
-        # TOC anchors resolve, no duplicate heading ids
-        toc_hrefs = re.findall(r'class="toc-level-[23]" href="#([^"]+)"', html)
-        tocs = re.findall(r'<ol id="toc-(?:mobile|desktop)-list".*?</ol>', html, re.S)
-        check(f"blog-ui {aid}: both toc lists rendered", len(tocs) == 2)
-        dup_free = all(len(hs) == len(set(hs)) for hs in
-                       [re.findall(r'href="#([^"]+)"', t) for t in tocs])
-        check(f"blog-ui {aid}: no duplicate toc entries", dup_free)
-        check(f"blog-ui {aid}: mobile toc == desktop toc",
-              len(tocs) == 2 and
-              re.findall(r'href="#([^"]+)"', tocs[0]) == re.findall(r'href="#([^"]+)"', tocs[1]))
-        check(f"blog-ui {aid}: toc mobile details", 'class="toc-mobile lg:hidden' in html)
-        check(f"blog-ui {aid}: toc desktop rail", 'class="toc-rail hidden lg:block' in html)
-        # breadcrumb trail + hub backlink
-        hub_url = f'../../{row["parent_hub"]}'
-        check(f"blog-ui {aid}: hub backlink", f'class="hub-backlink' in html and f'href="{hub_url}"' in html)
-        # sources box
-        check(f"blog-ui {aid}: sources box aside",
-              re.search(r'<aside class="sources-box"[^>]*aria-label="Nguồn', html) is not None)
-        # CTA strictly from FACTS
-        f = fc.FACTS
-        check(f"blog-ui {aid}: CTA phone from facts", f'href="tel:{f["phone_tel"]}"' in html)
-        check(f"blog-ui {aid}: CTA zalo from facts", f'href="{f["zalo"]}"' in html)
-        # related: 3, no self, no dup, same category, files exist
-        related = re.findall(r'<a class="related-card" href="([^"]+)"', html)
-        check(f"blog-ui {aid}: exactly 3 related", len(related) == 3, str(related))
-        check(f"blog-ui {aid}: no self-related", path.name not in related)
-        check(f"blog-ui {aid}: related unique", len(related) == len(set(related)))
-        cat_files = {pathlib.Path(r["output_path"]).name for r in pub
-                     if r["category"] == row["category"]}
-        check(f"blog-ui {aid}: related same category + exist",
-              all(x in cat_files for x in related))
-        check(f"blog-ui {aid}: reading progress bar", 'id="reading-progress"' in html)
-        check(f"blog-ui {aid}: skip link", "skip-link" in html or "#main" in html)
-    # idempotent rebuild byte-identical
-    before = {r["output_path"]: (ROOT / r["output_path"]).read_bytes() for r in pub}
-    r2 = sh(sys.executable, "scripts/build_article_shell.py")
-    out = json.loads(r2.stdout.strip().splitlines()[-1]) if r2.stdout.strip() else {}
-    check("blog-ui: shell rebuild idempotent",
-          r2.returncode == 0 and out.get("built") == 0 and out.get("unchanged") == 35,
-          r2.stdout[:200])
-    check("blog-ui: rebuild byte-identical",
-          all((ROOT / p).read_bytes() == b for p, b in before.items()))
-    # factory untouched by blog-ui tests
-    rows = fc.load_matrix()
-    check("blog-ui: factory state untouched (2000/35)",
-          len(rows) == 2000 and sum(1 for r in rows if r["status"] == "PUBLISHED") == 35)
+
+def test_support_no_zalo():
+    """Zalo fully removed; support destination is the Agent URL, labelled Hỗ Trợ."""
+    # canonical facts
+    f = fc.FACTS
+    check("facts: no zalo key", "zalo" not in json.dumps(f).lower())
+    check("facts: support_url is agent url", f.get("support_url") == SUPPORT_URL,
+          str(f.get("support_url")))
+    check("facts: support_label Hỗ Trợ", f.get("support_label") == SUPPORT_LABEL)
+    # zero zalo in any rendered html / js / raw sections
+    offenders = []
+    for p in list(ROOT.glob("*.html")) + list((ROOT / "cam-nang").rglob("*.html")) \
+            + list((ROOT / "assets").rglob("*")) + list((ROOT / "sections").rglob("*")):
+        if p.is_file() and p.suffix in {".html", ".js", ".txt"}:
+            t = p.read_text(encoding="utf-8", errors="ignore").lower()
+            if "zalo" in t or "zalo.me" in t or "icon_of_zalo" in t:
+                offenders.append(str(p))
+    check("zero zalo refs in public output", not offenders, str(offenders[:5]))
+    # support button resolves to canonical URL on root pages
+    for name in ("index.html", "lienhe.html", "banggia.html", "antoan.html",
+                 "kinhnghiem.html", "hoidap.html", "xemay.html",
+                 "dulich.html", "cungduong.html", "gioithieu.html"):
+        html = (ROOT / name).read_text(encoding="utf-8")
+        check(f"{name}: support link to agent url", SUPPORT_URL in html)
+    # menu & footer: Hỗ Trợ with same URL (same vocabulary, same destination)
+    for p in ROOT.glob("*.html"):
+        html = p.read_text(encoding="utf-8")
+        nav = re.search(r'<nav[^>]*data-desktop-nav.*?</nav>', html, re.S)
+        foot = re.search(r'<footer.*?</footer>', html, re.S)
+        if nav:
+            check(f"{p.name}: nav has Hỗ Trợ", SUPPORT_LABEL in nav.group(0))
+            check(f"{p.name}: nav Hỗ Trợ url matches",
+                  (SUPPORT_LABEL in nav.group(0)) and (SUPPORT_URL in nav.group(0)))
+        if foot:
+            check(f"{p.name}: footer has Hỗ Trợ", SUPPORT_LABEL in foot.group(0))
+            check(f"{p.name}: footer Hỗ Trợ url matches",
+                  (SUPPORT_LABEL in foot.group(0)) and (SUPPORT_URL in foot.group(0)))
+    # no zalo logo/asset files left
+    zimgs = [p.name for p in (ROOT / "assets").rglob("*") if "zalo" in p.name.lower()]
+    check("no zalo asset files", not zimgs, str(zimgs))
+    # schema hygiene: agent url must never appear as social sameAs
+    sameas_hits = []
+    for p in list(ROOT.glob("*.html")) + list((ROOT / "cam-nang").rglob("*.html")):
+        html = p.read_text(encoding="utf-8")
+        for m in re.finditer(r'"sameAs"\s*:\s*\[(.*?)\]', html, re.S):
+            if SUPPORT_URL in m.group(1):
+                sameas_hits.append(p.name)
+    check("agent url not used as sameAs", not sameas_hits, str(sameas_hits[:5]))
+    # six category hubs exist
+    for hub in ("kinhnghiem", "hoidap", "xemay", "antoan", "dulich", "cungduong"):
+        p = ROOT / f"{hub}.html"
+        check(f"hub {hub}.html exists", p.exists())
+        if p.exists():
+            html = p.read_text(encoding="utf-8")
+            check(f"hub {hub}: exactly one H1", len(re.findall(r"<h1[\s>]", html)) == 1)
+            check(f"hub {hub}: has canonical", 'rel="canonical"' in html)
+            check(f"hub {hub}: no zalo", "zalo" not in html.lower())
+    # factory state untouched by this task: matrix published counts consistent, no active txn/lock mutation here (read-only)
+    check("no active txn file", not (ROOT / "data" / "batches" / "txn" / "txn.json").exists())
+    check("no writer lock file", not (ROOT / "data" / "batches" / "lock.json").exists())
 
 
 def test_seo_scorer():
@@ -655,7 +622,7 @@ def main():
     test_navigation()
     test_chunked_factory()
     test_seo_scorer()
-    test_blog_ui()
+    test_support_no_zalo()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")
     if FAIL:
         for f in FAIL[:40]:

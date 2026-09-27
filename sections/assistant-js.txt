@@ -132,7 +132,7 @@ Hoặc ghé Phố Cổ ăn **Xôi Yến** Nguyễn Hữu Huân nhé!
                            response = `
 ### ℹ️ Tư vấn kỹ thuật
 Hiện tượng bạn mô tả cần được thợ kiểm tra trực tiếp để chính xác nhất.
-* **Lời khuyên:** Đừng lo lắng, hãy gọi video call cho chúng tôi qua Zalo 0989595533, kỹ thuật viên sẽ nghe tiếng máy và bắt bệnh giúp bạn ngay lập tức!
+* **Lời khuyên:** Đừng lo lắng, hãy gọi hotline 0989595533 hoặc nhắn qua mục Hỗ Trợ trên trang để được kỹ thuật viên nghe tiếng máy và bắt bệnh giúp bạn ngay lập tức!
                            `;
                        }
                    }

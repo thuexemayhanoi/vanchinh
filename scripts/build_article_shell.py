@@ -209,7 +209,7 @@ def _cta(row):
         <p class="text-gray-600 dark:text-gray-300 mb-5 text-sm">Xem bảng giá niêm yết hoặc liên hệ trực tiếp trong giờ mở cửa {fc.FACTS["opening_hours"]["display"]}.</p>
         <div class="flex flex-col sm:flex-row justify-center gap-3">
             <a href="tel:{fc.FACTS["phone_tel"]}" class="min-h-11 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg shadow-md transition-colors"><i aria-hidden="true" class="fas fa-phone mr-2"></i>{fc.FACTS["phone"]}</a>
-            <a href="{fc.FACTS["zalo"]}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-6 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-300/60 dark:border-gray-600/60 text-gray-800 dark:text-gray-100 font-bold rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"><i aria-hidden="true" class="fas fa-comment-dots mr-2 text-blue-500"></i>Chat Zalo</a>
+            <a href="{fc.FACTS["support_url"]}" target="_blank" rel="noopener noreferrer" aria-label="{fc.FACTS["support_label"]}" class="min-h-11 px-6 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-300/60 dark:border-gray-600/60 text-gray-800 dark:text-gray-100 font-bold rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"><i aria-hidden="true" class="fas fa-comment-dots mr-2 text-blue-500"></i>{fc.FACTS["support_label"]}</a>
             <a href="../../{target}" class="min-h-11 px-6 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-300/60 dark:border-gray-600/60 text-gray-800 dark:text-gray-100 font-bold rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"><i aria-hidden="true" class="fas fa-tags mr-2 text-brand-600 dark:text-brand-400"></i>Xem bảng giá</a>
         </div>
     </div>
