@@ -1,0 +1,19 @@
+{
+  "article_id": "AT-0068",
+  "word_count": 1362,
+  "seo_score": 91,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 18,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3",
+    "aim for 1600-2000 useful words"
+  ]
+}
