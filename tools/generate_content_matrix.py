@@ -327,6 +327,21 @@ def main():
     assert len(all_rows) == 2000, len(all_rows)
     for idx, row in enumerate(all_rows):
         row["batch_id"] = f"B{idx // 50 + 1:02d}"
+    # Production state preservation: content fields are canonical and
+    # deterministic, but state fields must survive regeneration so that
+    # check_matrix_sync.py stays green once articles enter the state machine
+    # (WRITING/QA/REVIEW/REPAIR/PASS/PUBLISHED with scores and dates).
+    STATE_FIELDS = ["status", "score", "quality_status", "repair_attempts",
+                    "published_date", "last_checked", "notes"]
+    if OUT.exists():
+        with OUT.open(newline="", encoding="utf-8") as f:
+            prev = {r["article_id"]: r for r in csv.DictReader(f)}
+        for row in all_rows:
+            old = prev.get(row["article_id"])
+            if old:
+                for k in STATE_FIELDS:
+                    if old.get(k, "") != "":
+                        row[k] = old[k]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(all_rows[0].keys()))

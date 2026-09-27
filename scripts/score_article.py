@@ -67,8 +67,11 @@ def main():
 
     local = [h for h in re.findall(r'href="([^"#]+)"', html)
              if not h.startswith(("http", "tel:", "mailto:", "//"))]
-    editorial = [h for h in local if h in ("kinhnghiem.html", "antoan.html", "xemay.html",
-                                           "dulich.html", "cungduong.html", "hoidap.html")]
+    # Classify links by basename so relative hub links ("../../antoan.html")
+    # count as editorial while the broken-link check still resolves full paths.
+    editorial = [h for h in local if h.rsplit("/", 1)[-1] in
+                 ("kinhnghiem.html", "antoan.html", "xemay.html",
+                  "dulich.html", "cungduong.html", "hoidap.html")]
     if req["internal_editorial_links"]["min"] <= len(editorial) <= req["internal_editorial_links"]["max"]:
         score += req["internal_editorial_links"]["weight"]
     elif len(editorial) > req["internal_editorial_links"]["max"]:
@@ -84,7 +87,7 @@ def main():
         critical.append("parent hub link missing")
 
     commercial_pages = {o["page"] for o in fc.OWNERSHIP["commercial_owners"]}
-    commercial = [h for h in local if h in commercial_pages]
+    commercial = [h for h in local if h.rsplit("/", 1)[-1] in commercial_pages]
     if len(commercial) <= req["commercial_link_limit"]["max"]:
         score += req["commercial_link_limit"]["weight"]
     else:

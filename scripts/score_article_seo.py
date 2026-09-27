@@ -172,8 +172,9 @@ def score_article_seo(aid, write=True):
     local = [h for h in re.findall(r'href="([^"#]+)"', html)
              if not h.startswith(("http", "tel:", "mailto:", "//"))]
     art_dir = path.resolve().parent
-    editorial = [h for h in local if h in fc.CATEGORIES.values()]
-    if row["parent_hub"] in local:
+    # basename-based classification (articles link hubs as "../../<hub>.html")
+    editorial = [h for h in local if h.rsplit("/", 1)[-1] in fc.CATEGORIES.values()]
+    if any(h.rsplit("/", 1)[-1] == row["parent_hub"] for h in local):
         sec["internal_links"] += 5
     else:
         issues.append("parent hub link missing")
@@ -190,7 +191,7 @@ def score_article_seo(aid, write=True):
     else:
         recs.append(f"use {mn}-{mx} useful editorial links")
     commercial_pages = {o["page"] for o in fc.OWNERSHIP["commercial_owners"]}
-    commercial = [h for h in local if h in commercial_pages]
+    commercial = [h for h in local if h.rsplit("/", 1)[-1] in commercial_pages]
     if len(commercial) <= fc.RUBRIC["requirements"]["commercial_link_limit"]["max"]:
         sec["internal_links"] += 2
     else:

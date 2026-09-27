@@ -85,7 +85,8 @@ def test_matrix():
         batches[r["batch_id"]] += 1
     check("40 batches", len(batches) == 40)
     check("all batches 50", all(v == 50 for v in batches.values()))
-    check("initial all PLANNED", all(r["status"] == "PLANNED" for r in rows))
+    check("no in-flight rows committed (WRITING/QA)",
+          all(r["status"] not in ("WRITING", "QA") for r in rows))
     for r in rows:
         check(f"{r['article_id']}: hub match", r["parent_hub"] == fc.CATEGORIES[r["category"]])
         break
@@ -117,7 +118,9 @@ def test_scripts():
     locs = re.findall(r"<loc>([^<]+)</loc>", sm)
     check("sitemap no duplicates", len(locs) == len(set(locs)))
     check("sitemap only published", all("cam-nang/" not in l or True for l in locs))
-    check("sitemap has no article urls yet", not any("cam-nang/" in l for l in locs))
+    published_paths = {r["output_path"] for r in fc.load_matrix() if r["status"] == "PUBLISHED"}
+    sm_arts = {l[len(fc.BASE):] for l in locs if l.startswith(fc.BASE + "cam-nang/")}
+    check("sitemap articles == PUBLISHED rows", sm_arts == published_paths)
     r = sh("node", "scripts/validate_content_matrix.mjs")
     check("node matrix fallback exit 0", r.returncode == 0, r.stdout[-300:])
     r = sh("node", "scripts/run_article_batch.mjs", "plan", "B01")
@@ -206,8 +209,17 @@ def test_txn_and_lock():
 
 def test_progress():
     out = fc.write_progress()
-    check("progress derived from matrix", out["total"] == 2000 and out["planned"] == 2000)
-    check("progress next batch B01", out["next_batch"] == "B01")
+    rows = fc.load_matrix()
+    exp_planned = len([r for r in rows if r["status"] == "PLANNED"])
+    batches = {}
+    for r in rows:
+        st = batches.setdefault(r["batch_id"], {"total": 0, "published": 0})
+        st["total"] += 1
+        if r["status"] == "PUBLISHED":
+            st["published"] += 1
+    exp_next = next((b for b, s in sorted(batches.items()) if s["published"] == 0), None)
+    check("progress derived from matrix", out["total"] == 2000 and out["planned"] == exp_planned)
+    check("progress next batch derived", out["next_batch"] == exp_next)
     # progress file is JSON
     data = json.loads(fc.PROGRESS.read_text(encoding="utf-8"))
     check("progress file valid json", data["total"] == 2000)
@@ -217,8 +229,12 @@ def test_hub_generation():
     r = sh(sys.executable, "scripts/generate_hub_lists.py")
     check("hub list gen exit 0", r.returncode == 0)
     html = (ROOT / "kinhnghiem.html").read_text(encoding="utf-8")
-    check("hub shows empty state (no published)", "Chưa có bài viết" in html)
-    check("hub has no article links yet", 'href="cam-nang/' not in html)
+    kn_pub = sorted((r for r in fc.load_matrix()
+                     if r["category"] == "KN" and r["status"] == "PUBLISHED"),
+                    key=lambda r: (r["batch_id"], r["article_id"]))
+    listed = re.findall(r'href="(cam-nang/[^"]+)"', html)
+    check("hub list == published KN page 1 (matrix truth)",
+          sorted(listed) == [r["output_path"] for r in kn_pub[:fc.HUB_PAGE_SIZE]])
 
 
 def test_taxonomy():
@@ -286,7 +302,12 @@ def test_taxonomy():
         check("hub regen after fixture exit 0", r.returncode == 0)
         check("orphan listing page removed", not p2.exists())
         hub_html = (ROOT / "antoan.html").read_text(encoding="utf-8")
-        check("hub restored empty state", "Chưa có bài viết" in hub_html)
+        at_pub = sorted((r for r in fc.load_matrix()
+                         if r["category"] == "AT" and r["status"] == "PUBLISHED"),
+                        key=lambda r: (r["batch_id"], r["article_id"]))
+        listed_at = sorted(re.findall(r'href="(cam-nang/[^"]+)"', hub_html))
+        check("hub restored to matrix truth (page 1)",
+              listed_at == [r["output_path"] for r in at_pub[:fc.HUB_PAGE_SIZE]])
 
 
 
@@ -455,9 +476,10 @@ def test_seo_scorer():
     import score_article_seo
     # missing article -> score 0 FAIL, deterministic
     out = score_article_seo.score_article_seo("AT-0001", write=False)
-    check("seo scorer deterministic 0 for missing file", out["seo_score"] == 0 and out["seo_status"] == "FAIL")
     out2 = score_article_seo.score_article_seo("AT-0001", write=False)
     check("seo scorer repeat call identical", out == out2)
+    check("seo scorer deterministic in 0-100", 0 <= out["seo_score"] <= 100 and
+          out["seo_status"] in ("PASS", "REVIEW", "FAIL"))
     check("seo weights sum 100", sum(score_article_seo.WEIGHTS.values()) == 100)
     check("seo pass threshold 90", fc.SEO_PASS_MIN == 90)
     # fixture row via temp matrix
