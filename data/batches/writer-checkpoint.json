@@ -1,19 +1,19 @@
 {
   "schema_version": "1",
-  "batch": "B07",
+  "batch": "B08",
   "chunk_size": 10,
   "current_chunk_ids": [],
   "written_ids": [
-    "CD-0041",
-    "CD-0042",
-    "CD-0043",
-    "CD-0044",
-    "CD-0045",
-    "CD-0046",
-    "CD-0047",
-    "CD-0048",
-    "CD-0049",
-    "CD-0050"
+    "CD-0051",
+    "CD-0052",
+    "CD-0053",
+    "CD-0054",
+    "CD-0055",
+    "CD-0056",
+    "CD-0057",
+    "CD-0058",
+    "CD-0059",
+    "CD-0060"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -369,11 +369,21 @@
     "CD-0047",
     "CD-0048",
     "CD-0049",
-    "CD-0050"
+    "CD-0050",
+    "CD-0051",
+    "CD-0052",
+    "CD-0053",
+    "CD-0054",
+    "CD-0055",
+    "CD-0056",
+    "CD-0057",
+    "CD-0058",
+    "CD-0059",
+    "CD-0060"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-28T03:15:31Z",
-  "chunks_completed": 39,
-  "publish_operations": 39
+  "updated_at": "2026-09-28T07:23:48Z",
+  "chunks_completed": 40,
+  "publish_operations": 40
 }
