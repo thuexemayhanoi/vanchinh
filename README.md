@@ -259,7 +259,7 @@ Operator chạy định kỳ (Mistral scheduler, UTC+7):
 
 ## 25. Recovery sau lỗi runtime/tool
 
-Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker) là chuẩn. Chạy lại theo read order; dùng `recover` để xử lý marker; không vứt partial work. Bắt đầu bằng: `python3 scripts/run_article_batch.py recover && python3 scripts/run_tests.py`.
+Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker) là chuẩn. Chạy lại theo read order; dùng `recover` để xử lý marker; không vứt partial work. Bắt đầu bằng: `python3 scripts/run_article_batch.py recover && python3 tests/run_tests.py`.
 
 ---
 
