@@ -4,16 +4,16 @@
   "chunk_size": 10,
   "current_chunk_ids": [],
   "written_ids": [
-    "AT-0201",
-    "AT-0202",
-    "AT-0203",
-    "AT-0204",
-    "AT-0205",
-    "AT-0206",
-    "AT-0207",
-    "AT-0208",
-    "AT-0209",
-    "AT-0210"
+    "AT-0211",
+    "AT-0212",
+    "AT-0213",
+    "AT-0214",
+    "AT-0215",
+    "AT-0216",
+    "AT-0217",
+    "AT-0218",
+    "AT-0219",
+    "AT-0220"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -229,11 +229,21 @@
     "AT-0207",
     "AT-0208",
     "AT-0209",
-    "AT-0210"
+    "AT-0210",
+    "AT-0211",
+    "AT-0212",
+    "AT-0213",
+    "AT-0214",
+    "AT-0215",
+    "AT-0216",
+    "AT-0217",
+    "AT-0218",
+    "AT-0219",
+    "AT-0220"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-28T01:40:33Z",
-  "chunks_completed": 25,
-  "publish_operations": 25
+  "updated_at": "2026-09-28T01:47:52Z",
+  "chunks_completed": 26,
+  "publish_operations": 26
 }
