@@ -1,0 +1,19 @@
+{
+  "article_id": "CD-0035",
+  "word_count": 1250,
+  "seo_score": 93,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 23,
+    "structure": 15,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "aim for 1600-2000 useful words",
+    "add a summary/conclusion section"
+  ]
+}
