@@ -84,7 +84,13 @@ def _select_claim_rows(br, limit, ids, cp):
         sel = sorted(sel, key=lambda r: r["article_id"])
         return sel
     current = set((cp or {}).get("current_chunk_ids") or [])
-    resumed = sorted([r for r in br if r["article_id"] in current and r["status"] == "WRITING"],
+    # Resume the checkpointed current chunk: rows still WRITING *or already in
+    # REPAIR* (writer files landed late / previous QA scored missing files)
+    # MUST be re-selected, otherwise claim drifts to fresh PLANNED rows and
+    # strands the current chunk (claim/qa/publish race with the external
+    # writer and the automated publish workflow).
+    resumed = sorted([r for r in br if r["article_id"] in current
+                      and r["status"] in ("WRITING", "QA", "REPAIR")],
                     key=lambda r: r["article_id"])
     fresh = planned[: max(0, (limit or fc.DEFAULT_CHUNK) - len(resumed))]
     return resumed + [r for r in fresh if r not in resumed]

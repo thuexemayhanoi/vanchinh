@@ -136,11 +136,12 @@ def cmd_run(args):
     # Resume in-flight chunk from checkpoint if it belongs to the active batch.
     chunk_ids = [c for c in snap["checkpoint_chunk_ids"]]
     rows = fc.load_matrix()
-    claimed_unfinished = [r for r in rows if r["status"] == "WRITING"]
+    claimed_unfinished = [r for r in rows if r["status"] in ("WRITING", "QA", "REPAIR")]
 
     if chunk_ids and all(
-            any(r["article_id"] == c and r["status"] == "WRITING" for r in rows) for c in chunk_ids):
-        pass  # resume the claimed chunk
+            any(r["article_id"] == c and r["status"] in ("WRITING", "QA", "REPAIR")
+                for r in rows) for c in chunk_ids):
+        pass  # resume the claimed chunk (incl. REPAIR rows from a late-writer QA)
     else:
         chunk_ids = [r["article_id"] for r in claimed_unfinished[:args.chunk_size]]
         if not chunk_ids:

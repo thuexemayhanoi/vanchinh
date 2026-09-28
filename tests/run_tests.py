@@ -457,13 +457,18 @@ def test_chunked_factory():
             untouched = [x for x in rows if x["batch_id"] == "B01" and x["status"] in ("WRITING", "PLANNED")]
             check("untouched rows remain WRITING/PLANNED after scoped qa",
                   len(untouched) == 45, str(len(untouched)))
-            # claim --limit 10 next: deterministic next rows (old chunk left WRITING state)
+            # claim --limit 10 next: the interrupted chunk rows (now REPAIR,
+            # files missing) MUST be resumed, then filled with fresh rows
             r = sh_env(sys.executable, "scripts/run_article_batch.py", "claim", "B01", "--limit", "10")
             j = json.loads(r.stdout)
-            check("claim limit 10 claims 10 fresh", j["claimed"] == 10, r.stdout[-200:])
+            check("claim limit 10 chunk = 5 resumed REPAIR + 5 fresh",
+                  j["claimed"] == 5 and len(j["chunk_ids"]) == 10, r.stdout[-200:])
             rows = fc.load_matrix()
             writing = [x for x in rows if x["batch_id"] == "B01" and x["status"] == "WRITING"]
-            check("10 WRITING after second claim", len(writing) == 10)
+            check("5 fresh WRITING + 5 resumed REPAIR after second claim",
+                  len(writing) == 5 and
+                  len([x for x in rows if x["batch_id"] == "B01" and x["status"] == "REPAIR"]) == 5,
+                  str(len(writing)))
             # scoped qa by explicit ids touches only those rows
             three = sorted(x["article_id"] for x in writing)[:3]
             r = sh_env(sys.executable, "scripts/run_article_batch.py", "qa", "B01", "--ids", ",".join(three))
@@ -471,7 +476,7 @@ def test_chunked_factory():
             check("scoped qa by ids touches 3", set(j["scoped"]) == set(three), r.stdout[-200:])
             rows = fc.load_matrix()
             still_writing = [x for x in rows if x["batch_id"] == "B01" and x["status"] == "WRITING"]
-            check("qa by ids leaves other WRITING rows untouched", len(still_writing) == 7,
+            check("qa by ids leaves other WRITING rows untouched", len(still_writing) == 2,
                   str(len(still_writing)))
             # PUBLISHED never reclaimed
             for x in rows:
@@ -618,6 +623,60 @@ def test_seo_scorer():
 
 
 
+def test_claim_resume_repair_rows():
+    """Claim drift regression: the checkpointed current chunk rows in REPAIR
+    (writer files landed after a QA of missing files) MUST be re-selected by
+    the next claim, never stranded in favor of fresh PLANNED rows."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        fc.PROGRESS = tdp / "progress.json"
+        fc.THROUGHPUT = tdp / "throughput.json"
+        rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
+        for x in rows:
+            x["status"] = "PUBLISHED" if x["article_id"] in ("AT-0001", "AT-0002") else "PLANNED"
+        # simulate: current chunk AT-0003..AT-0005 claimed, QA'd with files
+        # missing -> REPAIR (repair_attempts=1), checkpoint holds the chunk
+        for x in rows[:0]:
+            pass
+        by = {x["article_id"]: x for x in rows}
+        for aid in ("AT-0003", "AT-0004", "AT-0005"):
+            by[aid]["status"] = "REPAIR"
+            by[aid]["repair_attempts"] = "1"
+        with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        fc.write_checkpoint(batch="B01", chunk_size=3,
+                            current_chunk_ids=["AT-0003", "AT-0004", "AT-0005"],
+                            last_completed_step="qa")
+        env = dict(os.environ, CONTENT_MATRIX=str(fc.MATRIX),
+                   PROGRESS_FILE=str(fc.PROGRESS), WRITER_CHECKPOINT=str(fc.CHECKPOINT),
+                   FACTORY_THROUGHPUT=str(fc.THROUGHPUT))
+        try:
+            r = sh(sys.executable, "scripts/run_article_batch.py", "claim", "B01", "--limit", "5", env=env)
+            j = json.loads(r.stdout)
+            check("claim resumes REPAIR rows of current chunk",
+                  set(j["chunk_ids"]) >= {"AT-0003", "AT-0004", "AT-0005"}, r.stdout[-300:])
+            rows = fc.load_matrix()
+            still = {x["article_id"]: x["status"] for x in rows
+                    if x["article_id"] in ("AT-0003", "AT-0004", "AT-0005")}
+            check("REPAIR chunk rows not regressed to PLANNED/stranded",
+                  all(v in ("REPAIR", "QA") for v in still.values()), str(still))
+        finally:
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            fc.PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
+            fc.THROUGHPUT = ROOT / "reports" / "batches" / "factory-throughput.json"
+            fc.release_lock()
+    check("production matrix untouched by claim-resume tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def test_continuous_factory():
     """run_continuous_factory.py driver: CONTINUE derived from unfinished rows,
     COMPLETE only when all terminal; chunk resume; WRITER_REQUIRED keeps the
@@ -717,6 +776,7 @@ def main():
     test_taxonomy()
     test_navigation()
     test_chunked_factory()
+    test_claim_resume_repair_rows()
     test_continuous_factory()
     test_seo_scorer()
     test_support_no_zalo()
