@@ -617,6 +617,93 @@ def test_seo_scorer():
     check("production matrix untouched by seo tests", fc.MATRIX.read_bytes() == fc.MATRIX.read_bytes())
 
 
+
+def test_continuous_factory():
+    """run_continuous_factory.py driver: CONTINUE derived from unfinished rows,
+    COMPLETE only when all terminal; chunk resume; WRITER_REQUIRED keeps the
+    chunk claimed (resumable, not lost); concurrency + push-race policy."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        fc.PROGRESS = tdp / "progress.json"
+        fc.THROUGHPUT = tdp / "throughput.json"
+        rows = [dict(r) for r in orig_matrix.read_bytes() and list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))]
+        for x in rows:
+            x["status"] = "PUBLISHED" if x["article_id"] in ("AT-0001", "AT-0002") else "PLANNED"
+            if x["status"] == "PLANNED" and x["batch_id"] == "B01":
+                x["output_path"] = "cam-nang/__test_missing__/" + x["slug"] + ".html"
+        with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        env = dict(os.environ, CONTENT_MATRIX=str(fc.MATRIX),
+                   PROGRESS_FILE=str(fc.PROGRESS), WRITER_CHECKPOINT=str(fc.CHECKPOINT),
+                   FACTORY_THROUGHPUT=str(fc.THROUGHPUT))
+        try:
+            r = sh(sys.executable, "scripts/run_continuous_factory.py", "status", env=env)
+            j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+            check("driver: PLANNED remaining => CONTINUE",
+                  j["factory_status"] == "CONTINUE" and j["unfinished"] > 0)
+            check("driver: status command prints CONTINUING",
+                  "VANCHINH_FACTORY_CONTINUING" in r.stdout)
+            check("driver: next_article derived from matrix",
+                  j["next_article"] == "AT-0003", j["next_article"])
+            check("driver: active_batch earliest unfinished",
+                  j["active_batch"] == "B01", j["active_batch"])
+            # run: claims chunk, files missing -> WRITER_REQUIRED, chunk stays WRITING
+            r = sh(sys.executable, "scripts/run_continuous_factory.py", "run", "--chunk-size", "5", env=env)
+            check("driver: missing files => WRITER_REQUIRED",
+                  r.returncode == 1 and "VANCHINH_FACTORY_WRITER_REQUIRED" in r.stdout,
+                  r.stdout[-200:])
+            j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+            check("driver: writer chunk is exactly claimed size",
+                  len(j["chunk_ids"]) == 5, r.stdout[:200])
+            rows = fc.load_matrix()
+            writing = [x for x in rows if x["status"] == "WRITING"]
+            check("driver: WRITER_REQUIRED leaves chunk claimed (resumable)",
+                  len(writing) == 5 and all(x["status"] == "WRITING" for x in rows
+                                            if x["article_id"] in j["chunk_ids"]))
+            cp = fc.read_checkpoint()
+            check("driver: checkpoint holds current chunk for resume",
+                  sorted((cp or {}).get("current_chunk_ids") or []) == sorted(j["chunk_ids"]))
+            # status after claim still CONTINUE (not complete)
+            r = sh(sys.executable, "scripts/run_continuous_factory.py", "status", env=env)
+            check("driver: empty-vs-active chunk distinction => still CONTINUE",
+                  json.loads(r.stdout.split("VANCHINH_FACTORY")[0])["factory_status"] == "CONTINUE")
+            # simulate writer wrote nothing but another run happens: still WRITER_REQUIRED, no double claim
+            r2 = sh(sys.executable, "scripts/run_continuous_factory.py", "run", "--chunk-size", "5", env=env)
+            rows = fc.load_matrix()
+            check("driver: second run resumes same chunk (no overlapping claim)",
+                  len([x for x in rows if x["status"] == "WRITING"]) == 5,
+                  str(len([x for x in rows if x["status"] == "WRITING"])))
+            # all-terminal matrix => COMPLETE
+            for x in rows:
+                if x["status"] not in ("PUBLISHED",):
+                    x["status"] = "PUBLISHED"
+            with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                w.writeheader()
+                w.writerows(rows)
+            r = sh(sys.executable, "scripts/run_continuous_factory.py", "status", env=env)
+            j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+            check("driver: terminal-only matrix => COMPLETE",
+                  j["factory_status"] == "COMPLETE" and j["unfinished"] == 0)
+            check("driver: status command prints COMPLETE",
+                  "VANCHINH_FACTORY_COMPLETE" in r.stdout)
+        finally:
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            fc.PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
+            fc.THROUGHPUT = ROOT / "reports" / "batches" / "factory-throughput.json"
+            fc.release_lock()
+    check("production matrix untouched by continuous-factory tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def main():
     t0 = time.time()
     test_facts()
@@ -630,6 +717,7 @@ def main():
     test_taxonomy()
     test_navigation()
     test_chunked_factory()
+    test_continuous_factory()
     test_seo_scorer()
     test_support_no_zalo()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")
