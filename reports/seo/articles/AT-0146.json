@@ -1,1 +1,18 @@
-ewogICJhcnRpY2xlX2lkIjogIkFULTAxNDYiLAogICJ3b3JkX2NvdW50IjogMTI1NywKICAic2VvX3Njb3JlIjogOTYsCiAgInNlb19zdGF0dXMiOiAiUEFTUyIsCiAgInNlY3Rpb25zIjogewogICAgInRlY2huaWNhbCI6IDIwLAogICAgImludGVudCI6IDIzLAogICAgInN0cnVjdHVyZSI6IDE4LAogICAgImludGVybmFsX2xpbmtzIjogMTUsCiAgICAic2NoZW1hIjogMTAsCiAgICAiYWlfZ2VvIjogMTAKICB9LAogICJpc3N1ZXMiOiBbXSwgICJyZWNvbW1lbmRhdGlvbnMiOiBbCiAgICAiYWltIGZvciAxNjAwLTIwMDAgdXNlZnVsIHdvcmRzIgogIF0KfQ==
+{
+  "article_id": "AT-0146",
+  "word_count": 1257,
+  "seo_score": 96,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 23,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "aim for 1600-2000 useful words"
+  ]
+}
