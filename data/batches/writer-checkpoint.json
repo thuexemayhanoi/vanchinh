@@ -23,7 +23,12 @@
     "DL-0287",
     "DL-0288",
     "DL-0289",
-    "DL-0290"
+    "DL-0290",
+    "DL-0291",
+    "DL-0292",
+    "DL-0293",
+    "DL-0294",
+    "DL-0295"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -919,11 +924,16 @@
     "DL-0287",
     "DL-0288",
     "DL-0289",
-    "DL-0290"
+    "DL-0290",
+    "DL-0291",
+    "DL-0292",
+    "DL-0293",
+    "DL-0294",
+    "DL-0295"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-29T11:33:22Z",
-  "chunks_completed": 96,
-  "publish_operations": 96
+  "updated_at": "2026-09-29T11:40:19Z",
+  "chunks_completed": 97,
+  "publish_operations": 97
 }
