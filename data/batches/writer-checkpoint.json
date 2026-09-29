@@ -4,16 +4,16 @@
   "chunk_size": 10,
   "current_chunk_ids": [],
   "written_ids": [
-    "DL-0211",
-    "DL-0212",
-    "DL-0213",
-    "DL-0214",
-    "DL-0215",
-    "DL-0216",
-    "DL-0217",
-    "DL-0218",
-    "DL-0219",
-    "DL-0220"
+    "DL-0221",
+    "DL-0222",
+    "DL-0223",
+    "DL-0224",
+    "DL-0225",
+    "DL-0226",
+    "DL-0227",
+    "DL-0228",
+    "DL-0229",
+    "DL-0230"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -839,11 +839,21 @@
     "DL-0217",
     "DL-0218",
     "DL-0219",
-    "DL-0220"
+    "DL-0220",
+    "DL-0221",
+    "DL-0222",
+    "DL-0223",
+    "DL-0224",
+    "DL-0225",
+    "DL-0226",
+    "DL-0227",
+    "DL-0228",
+    "DL-0229",
+    "DL-0230"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-29T03:33:33Z",
-  "chunks_completed": 86,
-  "publish_operations": 86
+  "updated_at": "2026-09-29T05:34:59Z",
+  "chunks_completed": 87,
+  "publish_operations": 87
 }
