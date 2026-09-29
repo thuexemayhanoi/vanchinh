@@ -2,6 +2,10 @@
 
 `.github/workflows/factory-publish.yml` là cơ chế publish tự động, deterministic, KHÔNG dùng AI/API key/secrets bên trong GitHub Actions.
 
+## Event-driven — KHÔNG phải scheduler
+
+Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ sửa file bài trong `cam-nang/`. Nó KHÔNG: viết prose, gọi Mistral, schedule writer, hay tự tạo chunk kế tiếp. Sau khi publish thành công, trách nhiệm QUAY VỀ external writer: writer phải fetch fresh main và viết ngay chunk ≤ 10 kế tiếp theo continuous-run contract (docs/CONTINUOUS-WRITER.md). Nếu session writer đã kết thúc, factory đứng yên ở trạng thái sạch — không thành phần nào trong repo tự tiếp tục sản xuất nội dung.
+
 ## Vai trò
 
 - WRITER (run Mistral bên ngoài) cam kết file bài viết dưới `cam-nang/` lên nhánh `main` (sau khi CI của PR xanh).

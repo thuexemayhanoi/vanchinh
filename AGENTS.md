@@ -26,7 +26,18 @@ Hợp đồng ngắn gọn, bắt buộc với mọi AI agent làm việc trên 
 
 ## Thứ tự ưu tiên khi resume
 
-RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA → PUBLISH PASS → CLAIM WORK MỚI.
+RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA → PUBLISH PASS → FETCH FRESH MAIN → NEXT CHUNK → REPEAT.
+
+## Continuous writer loop (bắt buộc)
+
+Mọi writer run TUÂN THEO vòng lặp liên tục trong docs/CONTINUOUS-WRITER.md:
+
+FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE ≤ 10 file bài → LOCAL SCOPED QA → PUSH CHUNK (≤ 10 file mới) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → NEXT ≤ 10 → REPEAT.
+
+- KHÔNG kết thúc run sau một chunk thành công. Nếu không có blocker, bắt đầu NGAY chunk kế tiếp.
+- KHÔNG dừng chỉ vì 5/10 bài xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
+- Chỉ dừng khi: 2.000 row terminal hợp lệ, runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc blocker thật cần con người.
+- Giữ nguyên: tối đa 10 file bài mới mỗi push; một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
 
 ## Phân vai
 

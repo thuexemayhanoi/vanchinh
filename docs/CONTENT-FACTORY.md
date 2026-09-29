@@ -63,19 +63,20 @@ Quy tắc:
 - SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.
 - Throughput: `reports/batches/factory-throughput.json` (số liệu thật từ matrix + checkpoint).
 
-## Vòng đời một batch (lệnh chuẩn)
+## Vòng đời một batch (chunked continuous loop)
 
-Từ repo root, mỗi operator run:
+Batch = 50 bài, nhưng writer KHÔNG BAO GIỜ làm cả 50 row một lượt. Mỗi batch = chuỗi chunk ≤ 10 bài, lặp liên tục đến khi batch terminal (xem docs/CONTINUOUS-WRITER.md):
 
 ```bash
-python3 scripts/run_article_batch.py progress          # xem trạng thái hiện tại
-python3 scripts/run_article_batch.py plan B01          # manifest 50 dòng của B01
-python3 scripts/run_article_batch.py claim B01         # lock + chuyển WRITING
-# → Mistral viết 50 file bài theo manifest + docs/ARTICLE-RULES.md
-python3 scripts/run_article_batch.py qa B01            # validate + score từng bài
-python3 scripts/run_article_batch.py publish B01       # txn → matrix → sitemap → hubs → article shells → progress → xóa marker
-python3 scripts/run_article_batch.py recover           # nếu run bị gián đoạn giữa chừng
+python3 scripts/run_article_batch.py progress          # xác định active batch (batch đầu tiên còn row chưa terminal)
+# → writer chọn tối đa 10 row PLANNED kế tiếp (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
+# → local scoped QA → PUSH chunk (≤ 10 file mới) → factory-publish.yml: claim đúng ID có file → qa → publish
+python3 scripts/run_article_batch.py checkpoint          # xác nhận chunk đã reconcile
+# → FETCH FRESH MAIN → chunk ≤ 10 kế tiếp → LẶP LẠI cho tới khi batch terminal → sang batch kế
+python3 scripts/run_article_batch.py recover            # chỉ khi run bị gián đoạn giữa chừng
 ```
+
+Không pre-claim 50 row, không viết cả batch trước khi push, không dừng chờ phê duyệt giữa các chunk, không dừng sau một chunk: sau khi factory-publish xanh, fetch fresh main và viết ngay chunk kế tiếp.
 
 Node fallback (Python không khả dụng): `node scripts/validate_content_matrix.mjs`, `node scripts/run_article_batch.mjs plan B01`, `node scripts/run_article_batch.mjs progress`.
 

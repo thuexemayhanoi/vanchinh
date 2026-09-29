@@ -249,14 +249,17 @@ Yêu cầu: Python 3 stdlib; Node 18+ cho fallback. Không dependency ngoài.
 - Không push khi test đỏ. Sau push: verify remote HEAD.
 - Không tắt test để lấy kết quả xanh.
 
-## 24. Scheduled-operator behavior
+## 24. External writer behavior (continuous-run contract)
 
-Operator chạy định kỳ (Mistral scheduler, UTC+7):
+Writer là agent AI bên ngoài (Mistral run), KHÔNG phải GitHub Actions. Lịch chạy writer (nguồn bên ngoài, ví dụ Mistral scheduler, UTC+7) NẰM NGOÀI repo: repo không chứa scheduler AI, không API key, và GitHub Actions không bao giờ tự viết prose hay tự tạo chunk kế tiếp. Nếu session writer kết thúc, factory đứng yên ở trạng thái sạch cho tới khi một writer run mới được khởi động. Vì vậy MỌI writer run phải tuân theo continuous-run contract trong [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md):
+
 1. Fetch fresh main, đọc theo read order §21.
 2. Kiểm lock/txn; nếu marker pending → recover trước.
-3. Hoàn tất tiến độ dở của batch active TRƯỚC khi claim batch mới.
-4. Claim 50 row (WRITING) → viết bài theo rubric → QA → chỉ publish khi PASS.
-5. Commit, push, verify remote HEAD, ghi checkpoint vào reports.
+3. Hoàn tất REPAIR/QA/PASS pending của batch active TRƯỚC khi làm work mới.
+4. Viết TỐI ĐA 10 file bài mới (chunk chuẩn 10; chunk phần dư < 10 được phép), local scoped QA, push đúng chunk đó. KHÔNG BAO GIỜ pre-claim/ viết/ push cả 50 row batch một lượt.
+5. Chờ `factory-publish.yml` chạy xong → verify CI/ Pages → fetch fresh main → LẶP LẠI NGAY chunk kế tiếp. Batch 50 bài = 5 chunk; batch active phải terminal trước khi sang batch khác.
+
+Writer KHÔNG được dừng chỉ vì 5/10 bài xong, một workflow xong, một Pages deploy xong, một batch xong, hay report được sinh ra — đó là checkpoint, không phải điểm kết thúc. Chỉ dừng khi: (a) toàn bộ 2.000 row terminal hợp lệ, (b) runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc (c) blocker thật cần con người.
 
 ## 25. Recovery sau lỗi runtime/tool
 
@@ -275,6 +278,7 @@ Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker)
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit trước push
 - [reports/audits/audit-2026-09-26.md](reports/audits/audit-2026-09-26.md) — audit foundation run- [docs/BUSINESS-FACTS.md](docs/BUSINESS-FACTS.md) — fact kinh doanh
 - [docs/RECOVERY.md](docs/RECOVERY.md) — transaction, lock, resume
+- [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md) — continuous-run contract cho external writer (chunk ≤ 10, không dừng sau một chunk)
 - [docs/FACTORY-PUBLISH-WORKFLOW.md](docs/FACTORY-PUBLISH-WORKFLOW.md) — publish tự động
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit
 - [AGENTS.md](AGENTS.md) — hợp đồng thực thi cho AI agent
