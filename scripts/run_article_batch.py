@@ -181,20 +181,27 @@ def cmd_qa(batch_id, ids=None, limit=None):
         # scope: explicit ids > checkpoint current chunk > explicit limit > all
         if ids:
             scope = set(ids)
-        elif cp.get("batch") == batch_id and cp.get("current_chunk_ids"):
-            scope = set(cp["current_chunk_ids"])
-        elif limit:
-            wr = sorted([r for r in br if r["status"] in ("WRITING", "QA", "REPAIR")],
-                        key=lambda r: r["article_id"])
-            scope = {r["article_id"] for r in wr[:limit]}
+            # repair/resume semantics: an explicit-ID QA may re-score rows in
+            # WRITING/QA/REVIEW/REPAIR/PASS (a push that modified article
+            # files). The scoped default (workflow chunk QA) never touches
+            # REVIEW/PASS rows.
+            allowed = ("WRITING", "QA", "REVIEW", "REPAIR", "PASS")
         else:
-            scope = {r["article_id"] for r in br if r["status"] in ("WRITING", "QA", "REPAIR")}
+            allowed = ("WRITING", "QA", "REPAIR")
+            if cp.get("batch") == batch_id and cp.get("current_chunk_ids"):
+                scope = set(cp["current_chunk_ids"])
+            elif limit:
+                wr = sorted([r for r in br if r["status"] in ("WRITING", "QA", "REPAIR")],
+                            key=lambda r: r["article_id"])
+                scope = {r["article_id"] for r in wr[:limit]}
+            else:
+                scope = {r["article_id"] for r in br if r["status"] in ("WRITING", "QA", "REPAIR")}
         results = {"PASS": 0, "REVIEW": 0, "FAIL": 0}
         pass_ids, review_ids, fail_ids, repair_ids = set(), set(), set(), set()
         for r in rows:
             if r["batch_id"] != batch_id or r["article_id"] not in scope:
                 continue
-            if r["status"] not in ("WRITING", "QA", "REPAIR"):
+            if r["status"] not in allowed:
                 continue
             qres, sres = _qa_row(r)
             verdict = _qa_verdict(qres, sres)
@@ -223,15 +230,17 @@ def cmd_qa(batch_id, ids=None, limit=None):
                 fail_ids.add(r["article_id"])
         fc.save_matrix(rows)
         fc.write_progress()
-        merged = dict(cp)
-        merged_pass = set(merged.get("pass_ids") or []) | pass_ids
-        pending_repair = set(merged.get("pending_repair_ids") or []) | repair_ids
-        pending_publish = set(merged.get("pending_publish_ids") or []) | pass_ids
+        # Checkpoint pending lists are DERIVED from current matrix statuses
+        # (matrix > checkpoint): a repaired row that now PASSes leaves
+        # pending_repair_ids and enters pass/pending_publish; rows that stay
+        # REPAIR remain pending repair. No union-merge => no stale IDs.
+        m_pass = {r["article_id"] for r in rows if r["batch_id"] == batch_id and r["status"] == "PASS"}
+        m_repair = {r["article_id"] for r in rows if r["batch_id"] == batch_id and r["status"] == "REPAIR"}
         fc.write_checkpoint(batch=batch_id,
                             current_chunk_ids=sorted(scope),
-                            pass_ids=sorted(merged_pass),
-                            pending_repair_ids=sorted(pending_repair),
-                            pending_publish_ids=sorted(pending_publish),
+                            pass_ids=sorted(m_pass),
+                            pending_repair_ids=sorted(m_repair),
+                            pending_publish_ids=sorted(m_pass),
                             pending_qa_ids=[],
                             last_completed_step="qa")
         score_article_seo.seo_summary()
@@ -324,14 +333,17 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
             return 1
         fc.write_progress()
         fc.finish_txn({"published": len(to_publish), "batch": batch_id})
-        # checkpoint bookkeeping
+        # checkpoint bookkeeping: published ids leave every pending list;
+        # pending_repair is re-derived from the matrix (no stale entries).
         cp = fc.read_checkpoint() or {}
         published = set(cp.get("published_ids") or []) | {r["article_id"] for r in to_publish}
         pending_pub = set(cp.get("pending_publish_ids") or []) - published
         pass_ids = set(cp.get("pass_ids") or []) - published
+        repair_now = sorted({r["article_id"] for r in rows if r["status"] == "REPAIR"})
         cp2 = fc.write_checkpoint(batch=batch_id,
                                   pass_ids=sorted(pass_ids),
                                   pending_publish_ids=sorted(pending_pub),
+                                  pending_repair_ids=repair_now,
                                   published_ids=sorted(published),
                                   last_completed_step="publish")
         cp2["chunks_completed"] = int(cp2.get("chunks_completed") or 0) + 1

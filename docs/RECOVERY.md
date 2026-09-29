@@ -39,6 +39,8 @@ Stale lock: chỉ khi expired theo thời gian, và phải set `FORCE_STALE_LOCK
 - Trạng thái repo (matrix + reports + markers) là chuẩn, KHÔNG phải trí nhớ hội thoại.
 - Run trước claim 50, xong 30 → hoàn tất 30 còn lại trước khi claim batch mới. Batch mới chỉ được claim khi batch trước đã terminal toàn bộ row (PUBLISHED, BLOCKED, FAIL).
 - Không vứt partial work; không tự đếm lại từ đầu.
+- Checkpoint pending lists (pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, written_ids) là DERIVED state: khi đọc, mỗi list được lọc theo trạng thái matrix hiện tại. Row REPAIR được sửa và QA PASS → rời pending_repair_ids, vào pass/pending_publish; row PUBLISHED → rời mọi pending list. Nếu checkpoint chứa ID không khớp trạng thái matrix, MATRIX thắng — không cần sửa tay checkpoint.
+- Row REPAIR do workflow over-claim file chưa tồn tại (lỗi đã fix: claim mù theo limit): KHÔNG reset repair_attempts, KHÔNG rollback matrix; viết file bài cho đúng các ID đó rồi `qa <batch> --ids ...` → PASS → `publish <batch> --ids ...`.
 
 ## Quy trình chuẩn sau gián đoạn
 

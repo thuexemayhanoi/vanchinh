@@ -4,26 +4,28 @@
 
 ## Vai trò
 
-- WRITER (run Mistral bên ngoài) cam kết file bài viết mới dưới `cam-nang/` lên nhánh `main` (sau khi CI của PR xanh).
-- Workflow tự kích hoạt khi một push lên `main` THÊM file bài viết MỚI trong `cam-nang/` (`git diff --diff-filter=A`); push chỉ SỬA file bài (article shell rebuild, UI work, repair) KHÔNG bao giờ kích hoạt claim chunk mới. Backlog check (row PLANNED đã có file) giữ nguyên.
+- WRITER (run Mistral bên ngoài) cam kết file bài viết dưới `cam-nang/` lên nhánh `main` (sau khi CI của PR xanh).
+- Workflow tự kích hoạt khi một push lên `main` thêm hoặc sửa file bài trong `cam-nang/`. Scope CHÍNH XÁC được derive bởi `scripts/factory_push_selection.py` từ `git diff --diff-filter=A/M HEAD~1 HEAD -- cam-nang/`:
 
-1. Bỏ qua nếu push không có file bài viết mới (tránh vòng lặp với commit publish của chính workflow).
-2. Chốt lock/txn sạch trước khi mutate.
-3. Chunk size: 5 bài cho pilot (khi 0 bài PUBLISHED), 10 bài cho các chunk sau (theo hợp đồng README §21c).
-4. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish. Batch KHÔNG còn hard-code B01.
-5. `claim <active> --limit N`: đúng N row PLANNED -> WRITING, deterministic theo batch_id + article_id (claim từ chối nếu yêu cầu batch khác batch chưa hoàn tất đầu tiên).
-6. `qa <active>`: scoped QA — quality score (rubric 100) + SEO score (0-100) của đúng chunk.
-7. `publish <active>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Shell rebuild thất bại → rollback toàn bộ (row về PASS, marker xóa).
-8. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
-9. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
+  - NEW: push THÊM file bài → claim ĐÚNG các row PLANNED của active batch có output_path trong danh sách added VÀ file tồn tại (map output_path → article_id từ matrix). Max 10; push >10 file bài mới → REFUSE (writer phải chia push ≤10). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim (root cause B18: claim mù `--limit 10` đã biến 5 row chưa viết thành REPAIR score 0).
+  - REPAIR: push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → workflow QA + publish EXPLICIT đúng các ID đó (`qa --ids`, `publish --ids`), KHÔNG claim row PLANNED mới. Row PUBLISHED bị sửa (shell rebuild, UI work) không kích hoạt gì cả.
+  - BACKLOG: push không chạm file bài nhưng PLANNED row đã có file trong repo (pipeline trước fail giữa chừng) → claim đúng các row đó (≤10, deterministic theo article_id).
+  - SKIP: không có gì hợp lệ để xử lý (ví dụ push chỉ sửa tooling) → workflow kết thúc sạch.
+
+1. Chốt lock/txn sạch trước khi mutate.
+2. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish.
+3. NEW/BACKLOG: `claim <active> --ids <exact ids>`: đúng các row có file -> WRITING. REPAIR: không claim, chỉ `qa <active> --ids <repaired ids>` (qa --ids được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS).
+4. `publish <active> --ids <pass ids>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Shell rebuild thất bại → rollback toàn bộ (row về PASS, marker xóa).
+5. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
+6. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
 
 ## Quy tắc an toàn
 
-- Writer LUÔN viết đúng thứ tự row kế tiếp của batch (theo thứ tự claim) để claim chọn đúng bài có file.
+- Writer LUÔN viết đúng các row đã claim (theo thứ tự claim) và push đúng số file đã viết; workflow claim đúng đúng số file writer tạo — không over-claim, không under-claim.
 - Bài quality FAIL/REVIEW/REPAIR không chặn bài PASS trong cùng chunk; publish chỉ đưa row PASS lên PUBLISHED.
 - Nếu publish bị từ chối (không có row PASS hợp lệ), trạng thái qa/claim vẫn được commit để audit, workflow báo đỏ.
 - Không bao giờ chạy workflow khi có pending txn/lock; dùng `recover` trước (xem docs/RECOVERY.md).
-- MATRIX vẫn là source of truth; checkpoint chỉ là operational state (MATRIX > CHECKPOINT).
+- MATRIX vẫn là source of truth; checkpoint chỉ là operational state (MATRIX > CHECKPOINT). Mọi pending list của checkpoint (`pending_qa_ids`, `pending_repair_ids`, `pass_ids`, `pending_publish_ids`, `written_ids`) được DERIVE từ trạng thái matrix hiện tại khi đọc: row REPAIR → PASS rời khỏi `pending_repair_ids`; row PUBLISHED rời khỏi mọi pending list. Không có stale ID.
 
 ## Tương tác state fields của matrix
 

@@ -763,6 +763,194 @@ def test_continuous_factory():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_push_selection_and_repair():
+    """Push-scope selection + repair/resume regressions (workflow contract):
+    (1) push adds 5 files -> exactly those 5 claimed, other PLANNED rows stay
+        PLANNED (never over-claim, the B18 root cause);
+    (2) push adds 10 files -> exactly 10 claimed;
+    (3) repair-only push (modified article files) processes exactly the
+        repaired IDs and NEVER claims a fresh PLANNED row;
+    (4) REPAIR -> PASS clears pending_repair_ids and enters pass/publish lists;
+    (5) PASS -> PUBLISHED cleans checkpoint pending lists + txn marker;
+    (6) a PLANNED row whose file is missing is never claimed even if listed;
+    (7) more than 10 added article files -> refuse (exit 3)."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    import run_article_batch as rab  # noqa: E402
+    import factory_push_selection as fps  # noqa: E402
+    import score_article_seo  # noqa: E402
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        fc.PROGRESS = tdp / "progress.json"
+        fc.THROUGHPUT = tdp / "throughput.json"
+        orig_rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
+        orig_by = {x["article_id"]: x for x in orig_rows}
+        test_ids = [f"AT-{i:04d}" for i in range(1, 12)]  # AT-0001..AT-0011 (files exist)
+
+        def write_rows(status_map, path_overrides=None):
+            rows = [dict(r) for r in orig_rows]
+            by = {x["article_id"]: x for x in rows}
+            for x in rows:
+                if x["article_id"] in status_map:
+                    x["status"] = status_map[x["article_id"]][0]
+                    x["repair_attempts"] = status_map[x["article_id"]][1]
+                elif x["article_id"] not in test_ids:
+                    x["status"] = "PUBLISHED"
+                    x["repair_attempts"] = "0"
+            for aid, p in (path_overrides or {}).items():
+                by[aid]["output_path"] = p
+            with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                w.writeheader()
+                w.writerows(rows)
+
+        def path_of(aid):
+            return orig_by[aid]["output_path"]
+
+        env = dict(os.environ, CONTENT_MATRIX=str(fc.MATRIX),
+                   PROGRESS_FILE=str(fc.PROGRESS), WRITER_CHECKPOINT=str(fc.CHECKPOINT),
+                   FACTORY_THROUGHPUT=str(fc.THROUGHPUT), SEO_REPORTS_DIR=str(tdp / "seo"))
+        empty = tdp / "empty.txt"
+        empty.write_text("")
+        try:
+            # --- (2) 10 added files -> exactly 10 claimed -------------------
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
+            added10 = tdp / "added10.txt"
+            added10.write_text("\n".join(path_of(a) for a in test_ids[:10]) + "\n")
+            r = sh(sys.executable, "scripts/factory_push_selection.py",
+                   "--added", str(added10), "--modified", str(empty), env=env)
+            sel = json.loads(r.stdout)
+            check("selection: 10 added files -> exactly 10 claim ids",
+                  sel["claim_ids"] == sorted(test_ids[:10]) and sel["mode"] == "new",
+                  r.stdout[-300:])
+            # --- (7) >10 added files -> refuse -------------------------------
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids})
+            added11 = tdp / "added11.txt"
+            added11.write_text("\n".join(path_of(a) for a in test_ids) + "\n")
+            r = sh(sys.executable, "scripts/factory_push_selection.py",
+                   "--added", str(added11), "--modified", str(empty), env=env)
+            sel = json.loads(r.stdout)
+            check("selection: >10 added files -> refuse (never silently claim)",
+                  r.returncode == 3 and sel["refuse"] and not sel["proceed"],
+                  f"rc={r.returncode} {r.stdout[-200:]}")
+            # --- (1) 5 added files -> exactly 5 claimed ----------------------
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
+            added5 = tdp / "added5.txt"
+            added5.write_text("\n".join(path_of(a) for a in test_ids[:5]) + "\n")
+            r = sh(sys.executable, "scripts/factory_push_selection.py",
+                   "--added", str(added5), "--modified", str(empty), env=env)
+            sel = json.loads(r.stdout)
+            check("selection: 5 added files -> exactly 5 claim ids",
+                  sel["claim_ids"] == test_ids[:5] and sel["mode"] == "new", r.stdout[-300:])
+            check("selection: PLANNED rows not in the push are never claimed",
+                  all(a not in sel["claim_ids"] for a in test_ids[5:]), str(sel["claim_ids"]))
+            r = sh(sys.executable, "scripts/run_article_batch.py", "claim", "B01",
+                   "--ids", ",".join(test_ids[:5]), env=env)
+            j = json.loads([l for l in r.stdout.splitlines() if l.strip().startswith("{")][-1])
+            check("claim --ids: exactly 5 rows PLANNED->WRITING",
+                  j["claimed"] == 5, r.stdout[-300:])
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids[:10]}
+            check("claim --ids: unclaimed PLANNED rows stay PLANNED",
+                  all(st[a] == "PLANNED" for a in test_ids[5:10]) and
+                  all(st[a] == "WRITING" for a in test_ids[:5]), str(st))
+            # --- (6) PLANNED row with missing file never claimed -------------
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]},
+                       {"AT-0006": "cam-nang/__test_missing__/at-0006.html"})
+            added6 = tdp / "added6.txt"
+            added6.write_text("\n".join(path_of(a) for a in test_ids[:6]) + "\n")
+            r = sh(sys.executable, "scripts/factory_push_selection.py",
+                   "--added", str(added6), "--modified", str(empty), env=env)
+            sel = json.loads(r.stdout)
+            check("selection: PLANNED row with missing file never claimed",
+                  "AT-0006" not in sel["claim_ids"] and
+                  sel["claim_ids"] == test_ids[:5], str(sel["claim_ids"]))
+            # --- (3) repair-only push: no fresh PLANNED claim ---------------
+            # fixture: AT-0001,2,6..10 PLANNED with files present (would be
+            # over-claimed by the old buggy workflow), AT-0003..5 REPAIR
+            repair_fixture = {"AT-0003": ("REPAIR", "1"), "AT-0004": ("REPAIR", "1"),
+                               "AT-0005": ("REPAIR", "1"),
+                               "AT-0001": ("PLANNED", "0"), "AT-0002": ("PLANNED", "0")}
+            repair_fixture.update({aid: ("PLANNED", "0") for aid in test_ids[5:10]})
+            write_rows(repair_fixture)
+            modified3 = tdp / "modified3.txt"
+            modified3.write_text("\n".join(path_of(a) for a in test_ids[2:5]) + "\n")
+            r = sh(sys.executable, "scripts/factory_push_selection.py",
+                   "--added", str(empty), "--modified", str(modified3), env=env)
+            sel = json.loads(r.stdout)
+            check("selection: repair-only push -> mode repair, no claim ids",
+                  sel["mode"] == "repair" and sel["claim_ids"] == [] and
+                  sel["qa_ids"] == test_ids[2:5], r.stdout[-300:])
+            check("selection: repair push never claims fresh PLANNED rows",
+                  all(a not in sel["qa_ids"] for a in test_ids[:2] + test_ids[5:]))
+            # --- (4) REPAIR -> PASS clears pending_repair_ids ----------------
+            fc.write_checkpoint(batch="B01", chunk_size=3,
+                                current_chunk_ids=test_ids[2:5],
+                                pending_repair_ids=test_ids[2:5],
+                                last_completed_step="qa")
+            cp = fc.read_checkpoint()
+            check("fixture: stale pending_repair visible before repair QA",
+                  cp["pending_repair_ids"] == test_ids[2:5], str(cp.get("pending_repair_ids")))
+            r = sh(sys.executable, "scripts/run_article_batch.py", "qa", "B01",
+                   "--ids", ",".join(test_ids[2:5]), env=env)
+            j = json.loads([l for l in r.stdout.splitlines() if l.strip().startswith("{")][-1])
+            check("qa --ids REPAIR rows: all PASS (real files)",
+                  j["results"]["PASS"] == 3 and j["pass"] == test_ids[2:5], r.stdout[-300:])
+            cp = fc.read_checkpoint()
+            check("REPAIR->PASS: pending_repair_ids cleared (no stale entries)",
+                  cp["pending_repair_ids"] == [], str(cp.get("pending_repair_ids")))
+            check("REPAIR->PASS: rows enter pass_ids + pending_publish_ids",
+                  set(test_ids[2:5]) <= set(cp["pass_ids"]) and
+                  set(test_ids[2:5]) <= set(cp["pending_publish_ids"]),
+                  str(cp.get("pass_ids")))
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids[2:5]}
+            check("REPAIR->PASS: matrix rows are PASS",
+                  all(v == "PASS" for v in st.values()), str(st))
+            # --- (5) PASS -> PUBLISHED cleans checkpoint + txn --------------
+            orig_run = rab.run
+            orig_seo_dir = score_article_seo.SEO_DIR
+            score_article_seo.SEO_DIR = tdp / "seo"
+            fake = lambda cmd: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+            rab.run = fake
+            try:
+                rc = rab.cmd_publish("B01", ids=test_ids[2:5])
+                check("publish --ids: PASS rows published", rc == 0, f"rc={rc}")
+            finally:
+                rab.run = orig_run
+                score_article_seo.SEO_DIR = orig_seo_dir
+                if fc.txn_pending():
+                    fc.recover_txn()
+                fc.release_lock()
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids[2:5]}
+            check("PASS->PUBLISHED: matrix rows PUBLISHED",
+                  all(v == "PUBLISHED" for v in st.values()), str(st))
+            cp = fc.read_checkpoint()
+            check("PUBLISHED: rows in published_ids",
+                  set(test_ids[2:5]) <= set(cp["published_ids"]))
+            check("PUBLISHED: rows leave pass/pending_publish/pending_repair",
+                  not (set(test_ids[2:5]) & (set(cp["pass_ids"]) | set(cp["pending_publish_ids"]) |
+                       set(cp["pending_repair_ids"]))),
+                  json.dumps({k: cp.get(k) for k in ("pass_ids", "pending_publish_ids",
+                                                     "pending_repair_ids")}))
+            check("PUBLISHED: no txn marker left behind", not fc.txn_pending())
+            check("PUBLISHED: no lock left behind", not fc.LOCK.exists())
+        finally:
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            fc.PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
+            fc.THROUGHPUT = ROOT / "reports" / "batches" / "factory-throughput.json"
+            if fc.txn_pending():
+                fc.recover_txn()
+            fc.release_lock()
+    check("production matrix untouched by push-selection tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def main():
     t0 = time.time()
     test_facts()
@@ -778,6 +966,7 @@ def main():
     test_chunked_factory()
     test_claim_resume_repair_rows()
     test_continuous_factory()
+    test_push_selection_and_repair()
     test_seo_scorer()
     test_support_no_zalo()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")

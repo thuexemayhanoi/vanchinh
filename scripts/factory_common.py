@@ -266,20 +266,30 @@ def read_checkpoint():
         return None
     if cp.get("schema_version") != CHECKPOINT_SCHEMA:
         return None
-    # reconcile against the matrix (matrix > checkpoint)
+    # Reconcile against the matrix (matrix > checkpoint): every pending list
+    # is DERIVED from current matrix statuses so stale entries are impossible.
+    # A repaired row that now PASSes leaves pending_repair_ids; a published
+    # row leaves every pending list. The checkpoint never overrides the matrix.
     rows = load_matrix()
     by_id = {r["article_id"]: r for r in rows}
+    status = {aid: r["status"] for aid, r in by_id.items()}
     published = {aid for aid in (cp.get("published_ids") or [])
-                 if by_id.get(aid, {}).get("status") == "PUBLISHED"}
+                 if status.get(aid) == "PUBLISHED"}
     cp["published_ids"] = sorted(published)
-    for key in ("pending_publish_ids", "pass_ids", "pending_qa_ids", "written_ids",
-                "pending_repair_ids"):
+    derived_keep = {
+        # key: (keep predicate on current matrix status)
+        "pending_qa_ids": lambda s: s in ("WRITING", "QA"),
+        "pending_repair_ids": lambda s: s == "REPAIR",
+        "pass_ids": lambda s: s == "PASS",
+        "pending_publish_ids": lambda s: s == "PASS",
+        "written_ids": lambda s: s != "PLANNED",
+    }
+    for key, keep in derived_keep.items():
         vals = set(cp.get(key) or [])
-        vals -= published  # anything already published is no longer pending
-        vals = {v for v in vals if v in by_id}
+        vals = {v for v in vals if v in by_id and keep(status[v])}
         cp[key] = sorted(vals)
     cp["current_chunk_ids"] = [i for i in (cp.get("current_chunk_ids") or [])
-                               if i in by_id and by_id[i]["status"] != "PUBLISHED"]
+                               if i in by_id and status[i] != "PUBLISHED"]
     return cp
 
 

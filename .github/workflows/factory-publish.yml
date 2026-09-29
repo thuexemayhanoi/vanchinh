@@ -2,10 +2,16 @@ name: Factory Publish (chunked)
 
 # Automated, deterministic publish pipeline. NO AI, NO API keys, NO secrets.
 # The external WRITER (Mistral run) commits article files under cam-nang/;
-# this workflow runs the canonical factory tooling:
-#   claim (chunk) -> scoped QA (quality + SEO score) -> grouped transactional
-#   publish (quality PASS AND SEO >= 90) -> full test suite -> single commit
-#   of derived state (matrix, hubs, sitemap, checkpoint, reports).
+# this workflow derives the EXACT scope from the files added/modified in the
+# push (scripts/factory_push_selection.py) and then runs the canonical
+# factory tooling:
+#   NEW article push:    claim exactly the added-article IDs (max 10)
+#                        -> scoped QA (quality + SEO) -> transactional publish
+#   REPAIR article push: QA + publish EXACTLY the repaired IDs; NEVER claims
+#                        fresh PLANNED rows
+#   BACKLOG:             PLANNED rows whose files already exist (<= 10,
+#                        deterministic article_id order)
+# Publish gate: quality PASS AND SEO >= 90. Single commit of derived state.
 # See docs/FACTORY-PUBLISH-WORKFLOW.md.
 on:
   push:
@@ -29,91 +35,71 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Gate (proceed only when the push adds new article files)
-        id: gate
+      - name: Select push scope (exact IDs derived from added/modified article files)
+        id: select
         run: |
-          # Only NEWLY ADDED article files start a production chunk. Modified
-          # article files (e.g. article shell rebuilds, UI work, repairs) must
-          # NEVER trigger a new chunk claim.
-          NEW_ARTICLES=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- cam-nang/ | wc -l)
-          echo "new article files in this push: $NEW_ARTICLES"
-          # Backlog mode: resume when PLANNED rows already have their article
-          # files in the repo (e.g. a previous publish pipeline failure).
-          BACKLOG=$(python3 - <<'EOF'
-          import csv, os
-          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
-          planned = [r for r in rows if r['status'] == 'PLANNED']
-          print(1 if any(os.path.isfile(r['output_path']) for r in planned) else 0)
+          set -e
+          # Article files ADDED and MODIFIED by this push (never PUBLISHED-row
+          # modifications - those are shell rebuilds and must not claim).
+          git diff --name-only --diff-filter=A HEAD~1 HEAD -- cam-nang/ > /tmp/added.txt || true
+          git diff --name-only --diff-filter=M HEAD~1 HEAD -- cam-nang/ > /tmp/modified.txt || true
+          echo "added article files: $(wc -l < /tmp/added.txt || echo 0), modified: $(wc -l < /tmp/modified.txt || echo 0)"
+          python3 scripts/factory_push_selection.py --added /tmp/added.txt --modified /tmp/modified.txt | tee /tmp/selection.json
+          python3 - <<'EOF'
+          import json, os
+          sel = json.load(open('/tmp/selection.json'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"proceed={str(sel['proceed']).lower()}\n")
+              f.write(f"mode={sel['mode']}\n")
+              f.write(f"batch={sel['batch'] or ''}\n")
+              f.write(f"claim_ids={','.join(sel['claim_ids'])}\n")
+              f.write(f"qa_ids={','.join(sel['qa_ids'])}\n")
+              f.write(f"refuse={sel['refuse'] or ''}\n")
+          print(f"selection: mode={sel['mode']} batch={sel['batch']} "
+                f"claim={sel['claim_ids']} qa={sel['qa_ids']}")
+          if sel['refuse']:
+              raise SystemExit(f"REFUSED: {sel['refuse']}")
           EOF
-          )
-          echo "backlog (planned rows with files present): $BACKLOG"
-          if [ "$NEW_ARTICLES" -gt 0 ] || [ "$BACKLOG" -eq 1 ]; then
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "no new article files and no backlog -> skip publish pipeline"
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: "Guard: no pending transaction, no lock"
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: |
           test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
           test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }
-      - name: Determine active batch + chunk size (deterministic)
-        id: chunk
-        if: steps.gate.outputs.proceed == 'true'
+      - name: Claim chunk (exactly the added-article IDs; max 10; never rows without files)
+        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.claim_ids != ''
+        run: python3 scripts/run_article_batch.py claim ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.claim_ids }}
+      - name: Scoped QA (quality score + SEO score of the exact push IDs)
+        id: qa
+        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
         run: |
-          set -e
-          BATCH=$(python3 - <<'EOF'
-          import csv
-          TERMINAL = ("PUBLISHED", "BLOCKED", "FAIL")
-          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
-          order = []
-          for r in rows:
-              if r["batch_id"] not in order:
-                  order.append(r["batch_id"])
-          claimable = next((b for b in order
-                           if any(x["status"] not in TERMINAL
-                                  for x in rows if x["batch_id"] == b)), "")
-          print(claimable)
-          EOF
-          )
-          PUBLISHED=$(python3 - <<'EOF'
-          import csv
-          rows = list(csv.DictReader(open('data/content-matrix.csv', encoding='utf-8')))
-          print(sum(1 for r in rows if r['status'] == 'PUBLISHED'))
-          EOF
-          )
-          if [ -z "$BATCH" ]; then
-            echo "no unfinished batch -> nothing to claim/publish"
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [ "$PUBLISHED" -eq 0 ]; then LIMIT=5; else LIMIT=10; fi
-          echo "batch=$BATCH" >> "$GITHUB_OUTPUT"
-          echo "limit=$LIMIT" >> "$GITHUB_OUTPUT"
-          echo "active batch=$BATCH, published=$PUBLISHED -> chunk limit=$LIMIT"
-      - name: Claim chunk (deterministic, exactly N rows PLANNED->WRITING)
-        if: steps.gate.outputs.proceed == 'true'
-        run: python3 scripts/run_article_batch.py claim ${{ steps.chunk.outputs.batch }} --limit ${{ steps.chunk.outputs.limit }}
-      - name: Scoped QA (quality score + SEO score of the current chunk)
-        if: steps.gate.outputs.proceed == 'true'
-        run: python3 scripts/run_article_batch.py qa ${{ steps.chunk.outputs.batch }}
-      - name: Grouped transactional publish (quality PASS AND SEO >= 90)
+          python3 scripts/run_article_batch.py qa ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.qa_ids }} | tee /tmp/qa.json
+      - name: Grouped transactional publish (quality PASS AND SEO >= 90, explicit IDs)
         id: publish
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
         continue-on-error: true
-        run: python3 scripts/run_article_batch.py publish ${{ steps.chunk.outputs.batch }}
+        run: |
+          PASS_IDS=$(python3 - <<'EOF'
+          import json
+          lines = [l for l in open('/tmp/qa.json') if l.strip().startswith('{')]
+          print(','.join(json.loads(lines[-1])['pass']))
+          EOF
+          )
+          if [ -n "$PASS_IDS" ]; then
+            python3 scripts/run_article_batch.py publish ${{ steps.select.outputs.batch }} --ids "$PASS_IDS"
+          else
+            echo "no PASS rows from this QA round; nothing to publish (state still committed for review)"
+          fi
       - name: Full test suite (pre-push gate)
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: python3 tests/run_tests.py
       - name: Site validation (pre-push gate)
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: python3 scripts/validate_site.py
       - name: Matrix validation (pre-push gate)
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: python3 scripts/validate_content_matrix.py
       - name: Commit publish results (single commit per chunk)
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: |
           git config user.name "vanchinh-factory-bot"
           git config user.email "nguyentuantu2482@users.noreply.github.com"
@@ -121,16 +107,16 @@ jobs:
           if git diff --cached --quiet; then
             echo "no state changes to commit"
           else
-            git commit -m "factory: ${{ steps.chunk.outputs.batch }} chunk publish (limit ${{ steps.chunk.outputs.limit }}) [automated txn]"
+            git commit -m "factory: ${{ steps.select.outputs.batch }} ${{ steps.select.outputs.mode }} publish (${{ steps.select.outputs.qa_ids }}) [automated txn]"
             git push
           fi
       - name: Assert clean factory state
-        if: steps.gate.outputs.proceed == 'true'
+        if: steps.select.outputs.proceed == 'true'
         run: |
           test ! -f data/batches/lock.json || { echo "lock left behind"; exit 1; }
           test ! -f data/batches/txn/txn.json || { echo "txn marker left behind"; exit 1; }
       - name: Report publish refusal if any
-        if: steps.gate.outputs.proceed == 'true' && steps.publish.outcome == 'failure'
+        if: steps.select.outputs.proceed == 'true' && steps.publish.outcome == 'failure'
         run: |
           echo "publish refused (no eligible PASS rows or gate failure); state committed for review"
           exit 1

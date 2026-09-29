@@ -176,6 +176,7 @@ Run trước đòi 50 nhưng xong 30 → run sau HOÀN TẤT 30 còn lại TRƯ�
 - `article-quality.yml` sweep validator: bài viết hiện có fail validate → job FAIL (exit code != 0 được đếm).
 - `article-batch.yml` — workflow_dispatch, read-only dry-run (plan/progress).
 - `factory-publish-verify.yml` — workflow_dispatch, read-only publish dry-run verification.
+- `factory-publish.yml` — publish pipeline tự động khi push lên `main` thêm/sửa file bài trong `cam-nang/`. Scope CHÍNH XÁC do `scripts/factory_push_selection.py` derive từ `git diff`: push THÊM file bài → claim đúng các ID có file (PLANNED, max 10, row chưa có file không bao giờ bị claim; >10 file mới → REFUSE); push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → QA + publish đúng các ID được sửa (repair mode), KHÔNG claim row PLANNED mới; PLANNED đã có file mà push không chạm → backlog mode (≤10, deterministic). PUBLISHED row không bao giờ bị claim lại.
 - Publish (`run_article_batch.py publish`) từ chối khi taxonomy vi phạm: category không hợp lệ, sai parent hub, sai mapping nhóm, hoặc menu/footer có link bài viết trực tiếp.
 - KHÔNG cron cho AI writing. Scheduler ngoài (Mistral) lo phần đó. Actions luôn deterministic và an toàn.
 

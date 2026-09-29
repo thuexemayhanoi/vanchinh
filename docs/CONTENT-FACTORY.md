@@ -53,12 +53,12 @@ python3 scripts/run_article_batch.py throughput             # sinh factory-throu
 
 Quy tắc:
 
-- claim chỉ chuyển đúng N row PLANNED → WRITING (không claim cả 50).
-- qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái.
-- Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác.
+- claim chỉ chuyển đúng N row PLANNED → WRITING (không claim cả 50). `claim --ids` claim đúng danh sách ID tường minh (workflow dùng chế độ này: claim đúng các row có file trong push, max 10).
+- qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái. `qa --ids` được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS (repair/resume: push sửa file bài của các row này); scoped mặc định chỉ chấm WRITING/QA/REPAIR.
+- Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác. Row PLANNED chưa có file không bao giờ bị workflow claim (selection derive từ file thực tế trong push).
 - PUBLISHED không bao giờ bị claim lại.
 - INVARIANT batch hiện tại: batch đang chạy phải hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch khác batch-chưa-terminal đầu tiên (terminal: PUBLISHED, BLOCKED, FAIL); `next_batch` trong progress report KHÔNG phải quyền claim.
-- Checkpoint `data/batches/writer-checkpoint.json`: schema_version, batch, chunk_size, current_chunk_ids, written_ids, pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, published_ids, last_completed_step, updated_at. MATRIX > CHECKPOINT khi xung đột.
+- Checkpoint `data/batches/writer-checkpoint.json`: schema_version, batch, chunk_size, current_chunk_ids, written_ids, pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, published_ids, last_completed_step, updated_at. MATRIX > CHECKPOINT khi xung đột: mọi pending list được DERIVE từ trạng thái matrix khi đọc (REPAIR→PASS rời pending_repair_ids; PUBLISHED rời mọi pending list) — không tồn tại stale pending ID.
 - Publish gate: quality PASS VÀ SEO >= 90 (`score_article_seo.py`), không critical. SEO 100 không cứu được quality FAIL hay critical.
 - SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.
 - Throughput: `reports/batches/factory-throughput.json` (số liệu thật từ matrix + checkpoint).

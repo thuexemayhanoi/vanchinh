@@ -43,7 +43,9 @@ RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA
 ## Blog UI / article shell
 
 - File bài = bare article (head + đúng một `<article>`); chrome site/TOC/related/CTA là derived state của `scripts/build_article_shell.py`. Sửa UI blog = sửa shell builder/CSS/hub generator, KHÔNG sửa tay từng file bài.
-- Push sửa file bài (shell rebuild, UI work, repair) KHÔNG kích hoạt chunk mới (gate `--diff-filter=A`); chỉ file bài mới thêm mới claim chunk.
+- Push THÊM file bài mới → `factory-publish.yml` claim ĐÚNG các ID có file (row PLANNED của active batch, file tồn tại, max 10; >10 file mới trong một push → refuse). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim.
+- Push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → workflow QA + publish đúng các ID đó (repair mode), KHÔNG claim row PLANNED mới. Push sửa row PUBLISHED (shell rebuild, UI work) KHÔNG kích hoạt gì cả.
+- Scope của workflow do `scripts/factory_push_selection.py` derive từ `git diff` — deterministic, không AI/API key.
 - Shell không được đổi URL/canonical/JSON-LD/prose; CTA phải resolve từ business-facts, không hard-code.
 
 ## Sau mọi thay đổi
