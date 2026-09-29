@@ -1,0 +1,19 @@
+{
+  "article_id": "DL-0254",
+  "word_count": 1242,
+  "seo_score": 96,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 25,
+    "structure": 16,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "break long paragraphs into readable ones",
+    "aim for 1600-2000 useful words"
+  ]
+}
