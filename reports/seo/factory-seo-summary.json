@@ -1,15 +1,15 @@
 {
-  "articles_scored": 710,
+  "articles_scored": 720,
   "average_score": 94.5,
   "min_score": 91,
   "max_score": 100,
-  "pass": 710,
+  "pass": 720,
   "review": 0,
   "fail": 0,
   "top_common_issues": [
     {
       "issue": "primary keyword not represented in title",
-      "count": 2
+      "count": 12
     }
   ]
 }

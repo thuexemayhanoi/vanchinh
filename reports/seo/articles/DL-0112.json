@@ -1,0 +1,21 @@
+{
+  "article_id": "DL-0112",
+  "word_count": 1304,
+  "seo_score": 91,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 16,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": [
+    "break long paragraphs into readable ones",
+    "aim for 1600-2000 useful words"
+  ]
+}
