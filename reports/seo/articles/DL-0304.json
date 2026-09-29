@@ -1,0 +1,16 @@
+{
+  "article_id": "DL-0304",
+  "word_count": 1612,
+  "seo_score": 100,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 25,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": []
+}
