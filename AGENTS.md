@@ -14,7 +14,7 @@ Hợp đồng ngắn gọn, bắt buộc với mọi AI agent làm việc trên 
 
 ## Batch / chunk
 
-- Batch = 50 bài (B01–B40, tổng 2.000). Writer chunk = 5 bài pilot, sau đó 10 bài (max 10). Batch ≠ chunk.
+- Batch = 50 bài (B01–B40, tổng 2.000). SIMPLE PRODUCTION MODE: batch = chunk = 50 bài. Writer/Mistral viết và push tối đa 50 bài mới/lượt (một push = một batch). Không còn pilot 5.
 - INVARIANT: batch hiện tại chưa hoàn tất PHẢI hoàn tất trước. `claim` từ chối batch khác batch-chưa-hoàn-thành đầu tiên. KHÔNG bao giờ nhảy sang B02 khi B01 còn row chưa terminal. Terminal: PUBLISHED, BLOCKED, FAIL. `next_batch` trong progress report không phải quyền claim.
 - Thứ tự deterministic: batch_id + article_id. PUBLISHED không bao giờ bị claim lại.
 
@@ -32,12 +32,12 @@ RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA
 
 Mọi writer run TUÂN THEO vòng lặp liên tục trong docs/CONTINUOUS-WRITER.md:
 
-FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE ≤ 10 file bài → LOCAL SCOPED QA → PUSH CHUNK (≤ 10 file mới) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → NEXT ≤ 10 → REPEAT.
+FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE ≤ 50 file bài (= 1 batch) → LOCAL SCOPED QA (quality + SEO ≥ 90) → PUSH BATCH (≤ 50 file mới) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → NEXT ≤ 50 → REPEAT.
 
 - KHÔNG kết thúc run sau một chunk thành công. Nếu không có blocker, bắt đầu NGAY chunk kế tiếp.
-- KHÔNG dừng chỉ vì 5/10 bài xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
+- KHÔNG dừng chỉ vì 50 bài xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
 - Chỉ dừng khi: 2.000 row terminal hợp lệ, runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc blocker thật cần con người.
-- Giữ nguyên: tối đa 10 file bài mới mỗi push; một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
+- Giữ nguyên: tối đa 50 file bài mới mỗi push; một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
 
 ## Phân vai
 
@@ -54,7 +54,7 @@ FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trư�
 ## Blog UI / article shell
 
 - File bài = bare article (head + đúng một `<article>`); chrome site/TOC/related/CTA là derived state của `scripts/build_article_shell.py`. Sửa UI blog = sửa shell builder/CSS/hub generator, KHÔNG sửa tay từng file bài.
-- Push THÊM file bài mới → `factory-publish.yml` claim ĐÚNG các ID có file (row PLANNED của active batch, file tồn tại, max 10; >10 file mới trong một push → refuse). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim.
+- Push THÊM file bài mới → `factory-publish.yml` claim ĐÚNG các ID có file (row PLANNED của active batch, file tồn tại, max 50; >50 file mới trong một push → refuse). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim.
 - Push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → workflow QA + publish đúng các ID đó (repair mode), KHÔNG claim row PLANNED mới. Push sửa row PUBLISHED (shell rebuild, UI work) KHÔNG kích hoạt gì cả.
 - Scope của workflow do `scripts/factory_push_selection.py` derive từ `git diff` — deterministic, không AI/API key.
 - Shell không được đổi URL/canonical/JSON-LD/prose; CTA phải resolve từ business-facts, không hard-code.
@@ -71,11 +71,12 @@ FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trư�
 Phạm vi bắt buộc:
 
 - Change engine/ workflow/ recovery → TIER 1 + 2 + 3 + 4 bắt buộc.
-- Change content-only (bài viết) → tier theo scope, nhưng publish gate hiện hữu vẫn bắt buộc.
+- Change content-only (bài viết) → KHÔNG yêu cầu 4-tier cho mỗi batch: chỉ cần scoped QA (quality PASS + SEO >= 90, không critical) + publish gate + light matrix smoke trong factory-publish. Full-site audit toàn site chỉ chạy MỘT LẦN khi đủ 2.000 bài, sau đó repair theo batch lỗi.
 - KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
 
-## Sau mọi thay đổi
+## Sau mọi thay đổi (gates theo scope — Simple Production Mode)
 
-- Chạy full gates: `python3 tests/run_tests.py`, `scripts/validate_site.py`, `scripts/validate_content_matrix.py`, `node scripts/validate_content_matrix.mjs`, `scripts/check_matrix_sync.py`, `scripts/check_cannibalization.py`.
+- Change engine/ workflow/ scripts/ docs vận hành → full gates: `python3 tests/run_tests.py`, `scripts/validate_site.py`, `scripts/validate_content_matrix.py`, `node scripts/validate_content_matrix.mjs`, `scripts/check_matrix_sync.py`, `scripts/check_cannibalization.py`.
+- Change content-only (batch bài viết) → KHÔNG chạy full-site audit sau mỗi batch. Chỉ cần: scoped QA từng bài (quality PASS + SEO >= 90, không critical), publish đúng PASS IDs, light matrix smoke (validate_content_matrix + check_matrix_sync trong factory-publish), CI xanh của đúng SHA. Full-site audit (quality/SEO/duplicate/cannibalization/links/sitemap/schema toàn site) chạy MỘT LẦN khi đạt 2.000 bài, rồi repair theo batch.
 - Không push khi test đỏ. Sau push: verify remote HEAD và CI của đúng SHA mới.
 - Không claim SUCCESS/FIXED/PUBLISHED khi chưa kiểm chứng độc lập.

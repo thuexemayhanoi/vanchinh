@@ -6,14 +6,14 @@ The external WRITER (Mistral run) writes article files; this tool manages
 state, QA gates, publish consistency and reports.
 
 Chunked, resume-safe flow (see docs/CONTENT-FACTORY.md):
-  claim B01 --limit 5     -> lock + mark EXACTLY the selected rows WRITING
+  claim B01 --limit 50    -> lock + mark EXACTLY the selected rows WRITING
   (writer writes those files)
   qa B01 --ids ...        -> scoped QA (quality + SEO score) of the current
                              chunk only; untouched rows stay untouched
   publish B01             -> grouped transactional publish of eligible PASS
                              rows (quality PASS AND seo >= 90)
 
-Batch stays 50 articles; the writer works in chunks (pilot 5, then 10).
+Simple Production Mode: batch = chunk = 50 articles (one push per batch).
 Selection is deterministic: batch_id + article_id order.
 
 Commands:

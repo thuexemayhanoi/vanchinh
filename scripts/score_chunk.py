@@ -7,7 +7,7 @@ one pass. Individual scorers remain available for diagnostics.
 
 Usage:
   score_chunk.py KN-0001 KN-0002 ...
-  score_chunk.py --batch B01 --limit 10
+  score_chunk.py --batch B01 --limit 50
 """
 import argparse
 import json

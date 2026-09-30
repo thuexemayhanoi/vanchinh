@@ -9,7 +9,7 @@ because one batch or chunk finished:
     while unfinished rows exist:
         reconcile (recover txn, respect lock)
         choose earliest unfinished batch (deterministic)
-        claim next chunk (10 rows, or fewer for a final partial chunk)
+        claim next chunk (50 rows, or fewer for a final partial chunk)
         WRITER stage  -> external writer produces the article files
         qa
         publish (transactional, PASS + seo >= 90)
@@ -299,7 +299,7 @@ def main():
     sub.add_parser("status", help="print matrix-derived factory status")
     sub.add_parser("validate", help="run the production invariant gate standalone")
     p_run = sub.add_parser("run", help="process the next chunk end-to-end")
-    p_run.add_argument("--chunk-size", type=int, default=10)
+    p_run.add_argument("--chunk-size", type=int, default=50)
     p_run.add_argument("--writer-command", default=os.environ.get("VC_WRITER_CMD"),
                        help="external writer command; receives chunk ids appended")
     args = ap.parse_args()

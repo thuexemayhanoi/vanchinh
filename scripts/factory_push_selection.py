@@ -4,7 +4,7 @@
 automated factory-publish workflow.
 
 The workflow MUST claim exactly the article IDs whose files the writer
-actually added/modified in the push - never a blind `--limit 10` that grabs
+actually added/modified in the push - never a blind limit-based claim that grabs
 PLANNED rows whose files do not exist yet.
 
 Inputs (newline-separated path lists, one path per line):
@@ -16,15 +16,15 @@ Output: JSON on stdout describing the exact, verifiable scope:
     "proceed": bool,          # false => workflow skips everything
     "mode": "new"|"repair"|"backlog"|"skip",
     "batch": "B18"|null,     # active (first non-terminal) batch
-    "claim_ids": [...],      # PLANNED->WRITING claim targets (never >10)
+    "claim_ids": [...],      # PLANNED->WRITING claim targets (never >50)
     "qa_ids": [...],         # explicit QA targets (claim_ids + repaired ids)
     "refuse": null|"reason"  # non-null => the push violates the contract
   }
 
 Selection rules (deterministic, matrix truth):
   NEW mode:     PLANNED rows of the active batch whose output_path is in the
-                ADDED list AND the file exists. More than 10 => REFUSE (the
-                writer must push at most 10 new article files per commit).
+                ADDED list AND the file exists. More than 50 => REFUSE (the
+                writer must push at most 50 new article files per commit).
                 A PLANNED row whose file is NOT in the added list (or whose
                 file is missing) is NEVER claimed.
   REPAIR mode:  rows of the active batch in WRITING/QA/REVIEW/REPAIR/PASS
@@ -33,7 +33,7 @@ Selection rules (deterministic, matrix truth):
                 push NEVER claims fresh PLANNED rows.
   BACKLOG mode: no added/modified article files, but PLANNED rows of the
                 active batch already have files in the repo (e.g. a previous
-                pipeline failure). Deterministic first-10 by article_id.
+                pipeline failure). Deterministic first-50 by article_id.
   SKIP:         nothing to do (e.g. tooling-only push).
 
 Exit codes: 0 ok, 3 refuse (contract violation; state unchanged).
@@ -46,7 +46,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import factory_common as fc
 
 TERMINAL = ("PUBLISHED", "BLOCKED", "FAIL")
-MAX_CLAIM = 10
+MAX_CLAIM = 50  # Simple Production Mode: up to 50 new articles per push (= one batch)
 REPAIRABLE = ("WRITING", "QA", "REVIEW", "REPAIR", "PASS")
 
 

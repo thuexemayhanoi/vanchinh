@@ -4,23 +4,23 @@
 
 ## Event-driven — KHÔNG phải scheduler
 
-Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ sửa file bài trong `cam-nang/`. Nó KHÔNG: viết prose, gọi Mistral, schedule writer, hay tự tạo chunk kế tiếp. Sau khi publish thành công, trách nhiệm QUAY VỀ external writer: writer phải fetch fresh main và viết ngay chunk ≤ 10 kế tiếp theo continuous-run contract (docs/CONTINUOUS-WRITER.md). Nếu session writer đã kết thúc, factory đứng yên ở trạng thái sạch — không thành phần nào trong repo tự tiếp tục sản xuất nội dung.
+Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ sửa file bài trong `cam-nang/`. Nó KHÔNG: viết prose, gọi Mistral, schedule writer, hay tự tạo chunk kế tiếp. Sau khi publish thành công, trách nhiệm QUAY VỀ external writer: writer phải fetch fresh main và viết ngay batch ≤ 50 kế tiếp theo continuous-run contract (docs/CONTINUOUS-WRITER.md). Nếu session writer đã kết thúc, factory đứng yên ở trạng thái sạch — không thành phần nào trong repo tự tiếp tục sản xuất nội dung.
 
 ## Vai trò
 
 - WRITER (run Mistral bên ngoài) cam kết file bài viết dưới `cam-nang/` lên nhánh `main` (sau khi CI của PR xanh).
 - Workflow tự kích hoạt khi một push lên `main` thêm hoặc sửa file bài trong `cam-nang/`. Scope CHÍNH XÁC được derive bởi `scripts/factory_push_selection.py` từ `git diff --diff-filter=A/M HEAD~1 HEAD -- cam-nang/`:
 
-  - NEW: push THÊM file bài → claim ĐÚNG các row PLANNED của active batch có output_path trong danh sách added VÀ file tồn tại (map output_path → article_id từ matrix). Max 10; push >10 file bài mới → REFUSE (writer phải chia push ≤10). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim (root cause B18: claim mù `--limit 10` đã biến 5 row chưa viết thành REPAIR score 0).
+  - NEW: push THÊM file bài → claim ĐÚNG các row PLANNED của active batch có output_path trong danh sách added VÀ file tồn tại (map output_path → article_id từ matrix). Max 50; push >50 file bài mới → REFUSE (writer phải chia push ≤50). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim (root cause B18: claim mù đã biến 5 row chưa viết thành REPAIR score 0).
   - REPAIR: push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → workflow QA + publish EXPLICIT đúng các ID đó (`qa --ids`, `publish --ids`), KHÔNG claim row PLANNED mới. Row PUBLISHED bị sửa (shell rebuild, UI work) không kích hoạt gì cả.
-  - BACKLOG: push không chạm file bài nhưng PLANNED row đã có file trong repo (pipeline trước fail giữa chừng) → claim đúng các row đó (≤10, deterministic theo article_id).
+  - BACKLOG: push không chạm file bài nhưng PLANNED row đã có file trong repo (pipeline trước fail giữa chừng) → claim đúng các row đó (≤50, deterministic theo article_id).
   - SKIP: không có gì hợp lệ để xử lý (ví dụ push chỉ sửa tooling) → workflow kết thúc sạch.
 
 1. Chốt lock/txn sạch trước khi mutate.
 2. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish.
 3. NEW/BACKLOG: `claim <active> --ids <exact ids>`: đúng các row có file -> WRITING. REPAIR: không claim, chỉ `qa <active> --ids <repaired ids>` (qa --ids được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS).
 4. `publish <active> --ids <pass ids>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Rollback FAIL-CLOSED: sitemap/hub/shell regen thất bại → row về PASS + regen lại; CHỈ xóa marker khi regen xác minh PASS (rc 0); regen rollback fail → giữ marker + "rollback incomplete: run recover" (docs/RECOVERY.md).
-5. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix + check_matrix_sync + check_cannibalization + node validate_content_matrix.mjs TRƯỚC khi commit derived state (gate trước commit; thiếu bất kỳ gate nào đỏ → KHÔNG commit derived state).
+5. Light matrix smoke TRƯỚC khi commit derived state: `validate_content_matrix.py` + `check_matrix_sync.py` (gate trước commit; đỏ → KHÔNG commit derived state). KHÔNG chạy full test suite/validate_site/check_cannibalization/node parity trong vòng lặp mỗi batch (Simple Production Mode) — các gate nặng đó nằm ở CI (article-quality/site-quality), final verification của engine change, và full audit một lần khi đủ 2.000 bài.
 6. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
 
 ## Quy tắc an toàn

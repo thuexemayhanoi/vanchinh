@@ -176,7 +176,7 @@ Run trước đòi 50 nhưng xong 30 → run sau HOÀN TẤT 30 còn lại TRƯ�
 - `article-quality.yml` sweep validator: bài viết hiện có fail validate → job FAIL (exit code != 0 được đếm).
 - `article-batch.yml` — workflow_dispatch, read-only dry-run (plan/progress).
 - `factory-publish-verify.yml` — workflow_dispatch, read-only publish dry-run verification.
-- `factory-publish.yml` — publish pipeline tự động khi push lên `main` thêm/sửa file bài trong `cam-nang/`. Scope CHÍNH XÁC do `scripts/factory_push_selection.py` derive từ `git diff`: push THÊM file bài → claim đúng các ID có file (PLANNED, max 10, row chưa có file không bao giờ bị claim; >10 file mới → REFUSE); push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → QA + publish đúng các ID được sửa (repair mode), KHÔNG claim row PLANNED mới; PLANNED đã có file mà push không chạm → backlog mode (≤10, deterministic). PUBLISHED row không bao giờ bị claim lại.
+- `factory-publish.yml` — publish pipeline tự động khi push lên `main` thêm/sửa file bài trong `cam-nang/`. Scope CHÍNH XÁC do `scripts/factory_push_selection.py` derive từ `git diff`: push THÊM file bài → claim đúng các ID có file (PLANNED, max 50, row chưa có file không bao giờ bị claim; >50 file mới → REFUSE); push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → QA + publish đúng các ID được sửa (repair mode), KHÔNG claim row PLANNED mới; PLANNED đã có file mà push không chạm → backlog mode (≤50, deterministic). PUBLISHED row không bao giờ bị claim lại. Simple Production Mode: happy path chỉ gồm scoped QA + publish + light matrix smoke; KHÔNG chạy full test suite/validate_site/full-site cannibalization/node parity sau mỗi batch.
 - Publish (`run_article_batch.py publish`) từ chối khi taxonomy vi phạm: category không hợp lệ, sai parent hub, sai mapping nhóm, hoặc menu/footer có link bài viết trực tiếp.
 - KHÔNG cron cho AI writing. Scheduler ngoài (Mistral) lo phần đó. Actions luôn deterministic và an toàn.
 
@@ -203,16 +203,16 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 - Dropdown/menu/footer chỉ link tới HUB, không bao giờ link bài viết riêng lẻ; bài viết đến từ breadcrumb → parent hub.
 - Factory taxonomy vẫn là 6 category (KN/AT/XM/DL/CD/HD); 3 nhóm chỉ là UI grouping.
 
-## 21c. Content factory chunked mode
+## 21c. Content factory production mode (Simple Production Mode)
 
-- Batch vẫn 50 bài; writer làm việc theo CHUNK: pilot 5 bài, sau khi pilot xanh mặc định chunk 10 bài (max 10/chunk). Batch ≠ chunk: 40 batch × 50 bài = 2.000 dòng matrix.
-- Lệnh: `claim B01 --limit N` (claim đúng N row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA chỉ chunk hiện tại), `publish B01` (grouped publish PASS của chunk hiện tại).
+- Batch = chunk = 50 bài: writer viết và push tối đa 50 bài mới một lượt (một push = một batch). 40 batch × 50 bài = 2.000 dòng matrix. Production loop: WRITE 50 → LIGHT QA → PUBLISH → NEXT 50 → REPEAT. Không over-engineer workflow; full audit toàn site chỉ chạy một lần khi đủ 2.000 bài.
+- Lệnh: `claim B01 --limit 50` (claim đúng 50 row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA), `publish B01` (grouped publish PASS).
 - Invariant batch hiện tại: batch đang chạy PHẢI hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch ≠ batch chưa hoàn thành đầu tiên (theo thứ tự matrix). Trạng thái terminal cho phép chuyển batch: PUBLISHED, BLOCKED, FAIL. Hệ quả: không bao giờ nhảy sang B02 khi B01 còn row chưa terminal; `next_batch` trong progress report CHỈ là batch kế tiếp chưa có bài published, KHÔNG phải quyền claim.
 - Publish yêu cầu: quality PASS VÀ SEO score >= 90 VÀ không critical.
 - Checkpoint: `data/batches/writer-checkpoint.json` (operational state; MATRIX > CHECKPOINT khi conflict).
 - Throughput: `reports/batches/factory-throughput.json` (số thật, không ước lượng).
 - SEO score: `scripts/score_article_seo.py` (0–100, deterministic; PASS>=90, REVIEW 80–89, FAIL<80). Reports: `reports/seo/articles/<id>.json` + `reports/seo/factory-seo-summary.json`.
-- Bulk scoring: `scripts/score_chunk.py --batch B01 --limit 10`.
+- Bulk scoring: `scripts/score_chunk.py --batch B01 --limit 50`.
 - Vòng đời: WRITE → quality score → SEO score → REPAIR (max 3) → re-score → publish nếu cả hai gate PASS.
 
 ## 21d. Blog/article UX shell (derived UI layer)
@@ -256,10 +256,10 @@ Writer là agent AI bên ngoài (Mistral run), KHÔNG phải GitHub Actions. L�
 1. Fetch fresh main, đọc theo read order §21.
 2. Kiểm lock/txn; nếu marker pending → recover trước.
 3. Hoàn tất REPAIR/QA/PASS pending của batch active TRƯỚC khi làm work mới.
-4. Viết TỐI ĐA 10 file bài mới (chunk chuẩn 10; chunk phần dư < 10 được phép), local scoped QA, push đúng chunk đó. KHÔNG BAO GIỜ pre-claim/ viết/ push cả 50 row batch một lượt.
-5. Chờ `factory-publish.yml` chạy xong → verify CI/ Pages → fetch fresh main → LẶP LẠI NGAY chunk kế tiếp. Batch 50 bài = 5 chunk; batch active phải terminal trước khi sang batch khác.
+4. Viết TỐI ĐA 50 file bài mới (batch chuẩn 50; phần dư cuối < 50 được phép), local scoped QA, push đúng batch đó. Một push = một batch.
+5. Chờ `factory-publish.yml` chạy xong → verify CI/ Pages → fetch fresh main → LẶP LẠI NGAY batch kế tiếp. Batch active phải terminal trước khi sang batch khác.
 
-Writer KHÔNG được dừng chỉ vì 5/10 bài xong, một workflow xong, một Pages deploy xong, một batch xong, hay report được sinh ra — đó là checkpoint, không phải điểm kết thúc. Chỉ dừng khi: (a) toàn bộ 2.000 row terminal hợp lệ, (b) runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc (c) blocker thật cần con người.
+Writer KHÔNG được dừng chỉ vì 50 bài vừa publish, một workflow xong, một Pages deploy xong, một batch xong, hay report được sinh ra — đó là checkpoint, không phải điểm kết thúc. Chỉ dừng khi: (a) toàn bộ 2.000 row terminal hợp lệ, (b) runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc (c) blocker thật cần con người.
 
 ## 25. Recovery sau lỗi runtime/tool
 
@@ -278,7 +278,7 @@ Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker)
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit trước push
 - [reports/audits/audit-2026-09-26.md](reports/audits/audit-2026-09-26.md) — audit foundation run- [docs/BUSINESS-FACTS.md](docs/BUSINESS-FACTS.md) — fact kinh doanh
 - [docs/RECOVERY.md](docs/RECOVERY.md) — transaction, lock, resume
-- [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md) — continuous-run contract cho external writer (chunk ≤ 10, không dừng sau một chunk)
+- [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md) — continuous-run contract cho external writer (batch ≤ 50, không dừng sau một batch)
 - [docs/FACTORY-PUBLISH-WORKFLOW.md](docs/FACTORY-PUBLISH-WORKFLOW.md) — publish tự động
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit
 - [AGENTS.md](AGENTS.md) — hợp đồng thực thi cho AI agent

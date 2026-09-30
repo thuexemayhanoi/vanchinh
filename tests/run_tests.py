@@ -1480,7 +1480,8 @@ def test_push_selection_and_repair():
     (4) REPAIR -> PASS clears pending_repair_ids and enters pass/publish lists;
     (5) PASS -> PUBLISHED cleans checkpoint pending lists + txn marker;
     (6) a PLANNED row whose file is missing is never claimed even if listed;
-    (7) more than 10 added article files -> refuse (exit 3)."""
+    (7) 50 added files -> exactly 50 claimed (Simple Production Mode batch);
+    (8) added files exceeding MAX_CLAIM -> refuse (never silently claim)."""
     orig_matrix = fc.MATRIX
     orig_checkpoint = fc.CHECKPOINT
     before_bytes = orig_matrix.read_bytes()
@@ -1495,7 +1496,7 @@ def test_push_selection_and_repair():
         fc.THROUGHPUT = tdp / "throughput.json"
         orig_rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
         orig_by = {x["article_id"]: x for x in orig_rows}
-        test_ids = [f"AT-{i:04d}" for i in range(1, 12)]  # AT-0001..AT-0011 (files exist)
+        test_ids = [f"AT-{i:04d}" for i in range(1, 52)]  # AT-0001..AT-0051 (files exist)
 
         def write_rows(status_map, path_overrides=None):
             rows = [dict(r) for r in orig_rows]
@@ -1533,16 +1534,25 @@ def test_push_selection_and_repair():
             check("selection: 10 added files -> exactly 10 claim ids",
                   sel["claim_ids"] == sorted(test_ids[:10]) and sel["mode"] == "new",
                   r.stdout[-300:])
-            # --- (7) >10 added files -> refuse -------------------------------
-            write_rows({aid: ("PLANNED", "0") for aid in test_ids})
-            added11 = tdp / "added11.txt"
-            added11.write_text("\n".join(path_of(a) for a in test_ids) + "\n")
+            # --- (7) 50 added files -> exactly 50 claimed (batch = chunk = 50)
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids[:50]})
+            added50 = tdp / "added50.txt"
+            added50.write_text("\n".join(path_of(a) for a in test_ids[:50]) + "\n")
             r = sh(sys.executable, "scripts/factory_push_selection.py",
-                   "--added", str(added11), "--modified", str(empty), env=env)
+                   "--added", str(added50), "--modified", str(empty), env=env)
             sel = json.loads(r.stdout)
-            check("selection: >10 added files -> refuse (never silently claim)",
-                  r.returncode == 3 and sel["refuse"] and not sel["proceed"],
-                  f"rc={r.returncode} {r.stdout[-200:]}")
+            check("selection: 50 added files -> exactly 50 claim ids",
+                  sel["claim_ids"] == sorted(test_ids[:50]) and sel["mode"] == "new",
+                  r.stdout[-300:])
+            # --- (8) added files exceeding MAX_CLAIM -> refuse (never silently claim)
+            # A batch holds exactly 50 rows, so the >MAX_CLAIM guard is
+            # exercised in-process with a reduced cap (same refuse logic).
+            write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
+            fps.MAX_CLAIM = 5  # simulate a smaller cap; guard is size-independent
+            sel = fps.select([path_of(a) for a in test_ids[:10]], [])
+            check("selection: added files exceeding MAX_CLAIM -> refuse",
+                  bool(sel["refuse"]) and not sel["proceed"], str(sel)[:200])
+            fps.MAX_CLAIM = 50
             # --- (1) 5 added files -> exactly 5 claimed ----------------------
             write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
             added5 = tdp / "added5.txt"

@@ -5,13 +5,18 @@ name: Factory Publish (chunked)
 # this workflow derives the EXACT scope from the files added/modified in the
 # push (scripts/factory_push_selection.py) and then runs the canonical
 # factory tooling:
-#   NEW article push:    claim exactly the added-article IDs (max 10)
+#   NEW article push:    claim exactly the added-article IDs (max 50)
 #                        -> scoped QA (quality + SEO) -> transactional publish
 #   REPAIR article push: QA + publish EXACTLY the repaired IDs; NEVER claims
 #                        fresh PLANNED rows
-#   BACKLOG:             PLANNED rows whose files already exist (<= 10,
+#   BACKLOG:             PLANNED rows whose files already exist (<= 50,
 #                        deterministic article_id order)
 # Publish gate: quality PASS AND SEO >= 90. Single commit of derived state.
+# Simple Production Mode: scoped QA + light matrix smoke per push.
+# Full-site gates (full test suite, validate_site, full-site cannibalization,
+# node parity) are NOT part of the per-batch loop; they run in CI
+# (article-quality/site-quality) and at final verification / the
+# 2000-article full audit.
 # See docs/FACTORY-PUBLISH-WORKFLOW.md.
 on:
   push:
@@ -68,7 +73,7 @@ jobs:
         run: |
           test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
           test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }
-      - name: Claim chunk (exactly the added-article IDs; max 10; never rows without files)
+      - name: Claim batch (exactly the added-article IDs; max 50; never rows without files)
         if: steps.select.outputs.proceed == 'true' && steps.select.outputs.claim_ids != ''
         run: python3 scripts/run_article_batch.py claim ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.claim_ids }}
       - name: Scoped QA (quality score + SEO score of the exact push IDs)
@@ -92,24 +97,11 @@ jobs:
           else
             echo "no PASS rows from this QA round; nothing to publish (state still committed for review)"
           fi
-      - name: Full test suite (pre-push gate)
+      - name: Light matrix smoke (scoped pre-push gate)
         if: steps.select.outputs.proceed == 'true'
-        run: python3 tests/run_tests.py
-      - name: Site validation (pre-push gate)
-        if: steps.select.outputs.proceed == 'true'
-        run: python3 scripts/validate_site.py
-      - name: Matrix validation (pre-push gate)
-        if: steps.select.outputs.proceed == 'true'
-        run: python3 scripts/validate_content_matrix.py
-      - name: Matrix sync check (pre-push gate - matrix must equal generator output)
-        if: steps.select.outputs.proceed == 'true'
-        run: python3 scripts/check_matrix_sync.py
-      - name: Cannibalization check (pre-push gate)
-        if: steps.select.outputs.proceed == 'true'
-        run: python3 scripts/check_cannibalization.py
-      - name: Node matrix fallback (pre-push gate parity)
-        if: steps.select.outputs.proceed == 'true'
-        run: node scripts/validate_content_matrix.mjs
+        run: |
+          python3 scripts/validate_content_matrix.py
+          python3 scripts/check_matrix_sync.py
       - name: Commit publish results (single commit per chunk)
         if: steps.select.outputs.proceed == 'true'
         run: |

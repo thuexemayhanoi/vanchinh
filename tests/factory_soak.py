@@ -347,6 +347,9 @@ def main():
         # fixture matrix: reset the soak rows to PLANNED (writer starting fresh)
         rows = s.rows()
         by = {r["article_id"]: r for r in rows}
+        prod_published = len([r for r in rows if r["status"] == "PUBLISHED"])
+        assert all(by[aid]["status"] == "PUBLISHED" for aid in SOAK_IDS), \
+            "soak fixture expects all soak rows PUBLISHED in production"
         for aid in SOAK_IDS:
             by[aid]["status"] = "PLANNED"
             by[aid]["score"] = ""
@@ -363,8 +366,10 @@ def main():
             src = fixture / by[aid]["output_path"]
             shutil.copyfile(str(src), str(writer_cache / aid))
 
+        # baseline is derived from the copied production matrix (not a
+        # hard-coded count, which drifts as production progresses)
         check("soak: fixture baseline published count",
-              expected == 1000, str(expected))
+              expected == prod_published - len(SOAK_IDS), str(expected))
         # bring fixture derived outputs in sync with the fixture matrix
         # (the reset removed 30 articles from the published set)
         sh(fixture, "scripts/generate_sitemap.py")

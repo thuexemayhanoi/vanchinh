@@ -2,6 +2,8 @@
 
 Chạy từ repo root. Mọi mục critical phải PASS trước khi push.
 
+PHẠM VI (Simple Production Mode): checklist đầy đủ này dùng cho change engine/ workflow/ scripts và cho final verification. Push content-only (batch ≤ 50 bài) KHÔNG chạy checklist này mỗi batch — chỉ cần scoped QA (quality PASS + SEO >= 90, không critical), publish đúng PASS IDs, light matrix smoke trong factory-publish, CI xanh của đúng SHA. Full-site audit (mục 1–5 + 7 mở rộng toàn site) chạy MỘT LẦN khi đạt 2.000 bài, sau đó repair theo batch lỗi.
+
 ## 1. Fact / domain / hours
 
 - [ ] `grep -r "chothuexemayohanoi" --include="*.html"` → 0 kết quả
@@ -45,7 +47,7 @@ Chạy từ repo root. Mọi mục critical phải PASS trước khi push.
 
 ## 7. 4-Tier Verification Contract (AGENTS.md, docs/CONTENT-FACTORY.md §4-Tier)
 
-"CI GREEN" KHÔNG đồng nghĩa production-safe nếu tier áp dụng cho change chưa PASS. Change engine/ workflow/ recovery → đủ 4 tier:
+"CI GREEN" KHÔNG đồng nghĩa production-safe nếu tier áp dụng cho change chưa PASS. Change engine/ workflow/ recovery → đủ 4 tier. Change content-only (batch bài viết) → KHÔNG chạy 4-tier mỗi batch (xem PHẠM VI ở đầu tài liệu):
 
 - [ ] TIER 1 (UNIT): `python3 tests/run_tests.py` → 0 failed; test không mutate production state
 - [ ] TIER 2 (INTEGRATION): sandbox E2E claim → QA → publish; writer-required resume; push selection; repair flow; derived outputs deterministic

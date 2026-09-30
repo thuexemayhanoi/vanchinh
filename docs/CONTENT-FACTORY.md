@@ -37,23 +37,22 @@ Terminal: FAIL, BLOCKED
 - PUBLISHED: sau khi file bài + hub + sitemap + reports + matrix commit nhất quán trong MỘT transaction.
 - Bài FAIL/BLOCKED không chặn bài PASS khác trong cùng batch.
 
-## Chunked writer mode (canonical)
+## Production mode (Simple Production Mode, canonical)
 
-Batch vẫn 50 bài; writer làm việc theo chunk pilot 5 → 10 bài:
+Batch = chunk = 50 bài; writer viết và push tối đa 50 bài mới một lượt:
 
 ```bash
-python3 scripts/run_article_batch.py claim B01 --limit 5    # pilot chunk đầu
-# writer viết 5 file; qa scoped; publish grouped; pilot xanh →
-python3 scripts/run_article_batch.py claim B01 --limit 10   # chunk chuẩn (max 10)
-python3 scripts/run_article_batch.py qa B01                 # scoped theo checkpoint current chunk
-python3 scripts/run_article_batch.py publish B01            # grouped publish chunk hiện tại
+python3 scripts/run_article_batch.py claim B01 --limit 50  # batch chuẩn (max 50)
+# writer viết 50 file; qa scoped; publish grouped
+python3 scripts/run_article_batch.py qa B01                 # scoped theo checkpoint current chunk / --ids
+python3 scripts/run_article_batch.py publish B01            # grouped publish batch hiện tại
 python3 scripts/run_article_batch.py checkpoint             # xem trạng thái checkpoint
 python3 scripts/run_article_batch.py throughput             # sinh factory-throughput.json
 ```
 
 Quy tắc:
 
-- claim chỉ chuyển đúng N row PLANNED → WRITING (không claim cả 50). `claim --ids` claim đúng danh sách ID tường minh (workflow dùng chế độ này: claim đúng các row có file trong push, max 10).
+- claim chuyển đúng N row PLANNED → WRITING (mặc định 50 = cả batch). `claim --ids` claim đúng danh sách ID tường minh (workflow dùng chế độ này: claim đúng các row có file trong push, max 50).
 - qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái. `qa --ids` được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS (repair/resume: push sửa file bài của các row này); scoped mặc định chỉ chấm WRITING/QA/REPAIR.
 - Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác. Row PLANNED chưa có file không bao giờ bị workflow claim (selection derive từ file thực tế trong push).
 - PUBLISHED không bao giờ bị claim lại.
@@ -63,20 +62,20 @@ Quy tắc:
 - SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.
 - Throughput: `reports/batches/factory-throughput.json` (số liệu thật từ matrix + checkpoint).
 
-## Vòng đời một batch (chunked continuous loop)
+## Vòng đời một batch (Simple Production Mode)
 
-Batch = 50 bài, nhưng writer KHÔNG BAO GIỜ làm cả 50 row một lượt. Mỗi batch = chuỗi chunk ≤ 10 bài, lặp liên tục đến khi batch terminal (xem docs/CONTINUOUS-WRITER.md):
+Batch = chunk = 50 bài, writer viết cả batch rồi push một lượt (xem docs/CONTINUOUS-WRITER.md):
 
 ```bash
 python3 scripts/run_article_batch.py progress          # xác định active batch (batch đầu tiên còn row chưa terminal)
-# → writer chọn tối đa 10 row PLANNED kế tiếp (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
-# → local scoped QA → PUSH chunk (≤ 10 file mới) → factory-publish.yml: claim đúng ID có file → qa → publish
-python3 scripts/run_article_batch.py checkpoint          # xác nhận chunk đã reconcile
-# → FETCH FRESH MAIN → chunk ≤ 10 kế tiếp → LẶP LẠI cho tới khi batch terminal → sang batch kế
+# → writer chọn tối đa 50 row PLANNED (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
+# → local scoped QA → PUSH batch (≤ 50 file mới) → factory-publish.yml: claim đúng ID có file → qa → publish
+python3 scripts/run_article_batch.py checkpoint          # xác nhận batch đã reconcile
+# → FETCH FRESH MAIN → batch ≤ 50 kế tiếp → LẶP LẠI
 python3 scripts/run_article_batch.py recover            # chỉ khi run bị gián đoạn giữa chừng
 ```
 
-Không pre-claim 50 row, không viết cả batch trước khi push, không dừng chờ phê duyệt giữa các chunk, không dừng sau một chunk: sau khi factory-publish xanh, fetch fresh main và viết ngay chunk kế tiếp.
+Không dừng chờ phê duyệt giữa các batch, không dừng sau một batch: sau khi factory-publish xanh, fetch fresh main và viết ngay batch kế tiếp. Không chạy full-site audit sau mỗi batch — full audit toàn site chạy một lần khi đủ 2.000 bài.
 
 Node fallback (Python không khả dụng): `node scripts/validate_content_matrix.mjs`, `node scripts/run_article_batch.mjs plan B01`, `node scripts/run_article_batch.mjs progress`.
 
@@ -151,10 +150,10 @@ Hợp đồng bắt buộc (AGENTS.md tham chiếu mục này). "CI GREEN" KHÔN
 - Recovery fail-closed (docs/RECOVERY.md): recover KHÔNG xóa marker khi chưa chứng minh được trạng thái deterministic.
 - Liveness watchdog: `python3 scripts/factory_liveness.py` — READ-ONLY tuyệt đối (không recover, không xóa lock, không claim, không publish). Verdict: HEALTHY_IDLE / HEALTHY_ACTIVE (PASS), STALLED_ACTIVE / STALE_TXN / EXPIRED_OR_STALE_LOCK_WITH_UNFINISHED_WORK / CHECKPOINT_STALE (FAIL). Row PLANNED đơn thuần KHÔNG phải stall; writer nghỉ hợp lệ + không in-flight work = HEALTHY_IDLE. CI định kỳ: `.github/workflows/factory-liveness.yml` (contents: read, không push).
 
-### Phạm vi bắt buộc
+### Phạm vi bắt buộc (gates theo scope — Simple Production Mode)
 
 - Change engine/ workflow/ recovery/ scripts → TIER 1 + 2 + 3 + 4.
-- Change content-only (bài viết) → tier phù hợp scope; publish gate hiện hữu vẫn bắt buộc.
+- Change content-only (bài viết) → KHÔNG chạy 4-tier cho mỗi batch: scoped QA từng bài (quality PASS + SEO >= 90, không critical) + publish gate + light matrix smoke (validate_content_matrix + check_matrix_sync trong factory-publish) là đủ. Full-site audit toàn site chỉ chạy MỘT LẦN khi đủ 2.000 bài, sau đó repair theo batch lỗi.
 - KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
 
 ## Không trùng lặp liên site
