@@ -1,0 +1,24 @@
+name: Factory Soak (Tier 4)
+
+# On-demand long-run sandbox soak: multi-chunk publish cycles with fault
+# injection (writer-required resume, hub/sitemap generation failures,
+# crash after begin_txn, crash after partial writes, stale lock, invariant
+# validation fault) against a full temp fixture copy of the repository.
+# NEVER touches production state: the production tree is checksummed and
+# must be byte-identical before/after.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Multi-chunk soak + failure recovery
+        run: python3 tests/factory_soak.py
