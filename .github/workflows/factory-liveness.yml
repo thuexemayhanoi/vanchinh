@@ -1,0 +1,24 @@
+name: Factory Liveness Watchdog
+
+# READ-ONLY watchdog: detects "workflow green but factory standing still".
+# Never recovers, never deletes lock/txn, never claims, never publishes,
+# never pushes anything. Non-healthy states fail this workflow so the
+# stall is visible in Actions instead of hiding behind green publish runs.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Read-only liveness check
+        run: python3 scripts/factory_liveness.py

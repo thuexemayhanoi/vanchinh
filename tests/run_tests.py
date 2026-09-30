@@ -431,6 +431,192 @@ def test_recover_fail_closed():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_factory_liveness():
+    """FIX 3 regression: READ-ONLY liveness watchdog verdicts from repository
+    truth (matrix + checkpoint + progress + throughput + txn + lock).
+    PLANNED rows alone are never a stall; the checker must never mutate any
+    state. Scenarios: healthy idle, healthy active (fresh progress), stalled
+    WRITING, stalled PASS, stale checkpoint, stale txn, stale lock with
+    unfinished work, fresh lock, stale lock with all-terminal matrix."""
+    orig_matrix = fc.MATRIX
+    before_bytes = orig_matrix.read_bytes()
+    prod_txn = ROOT / "data" / "batches" / "txn" / "txn.json"
+    prod_lock = ROOT / "data" / "batches" / "lock.json"
+    orig = list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))
+    pub_rows = [r for r in orig if r["status"] == "PUBLISHED"][:2]
+    planned_rows = [r for r in orig if r["status"] == "PLANNED"][:2]
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        m = tdp / "m.csv"
+        cp = tdp / "writer-checkpoint.json"
+        prog = tdp / "p.json"
+        thr = tdp / "t.json"
+        lock = tdp / "lock.json"
+        txn = tdp / "txn" / "txn.json"
+
+        def write_matrix(status_map=None, all_published=False):
+            rows = [dict(r) for r in orig]
+            by = {r["article_id"]: r for r in rows}
+            for aid, st in (status_map or {}).items():
+                by[aid]["status"] = st
+            if all_published:
+                for r in rows:
+                    r["status"] = "PUBLISHED"
+            with m.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                w.writeheader()
+                w.writerows(rows)
+
+        def write_checkpoint(updated_at, chunk_ids=None):
+            cp.write_text(json.dumps({
+                "schema_version": "1", "batch": "B99", "chunk_size": 10,
+                "current_chunk_ids": sorted(chunk_ids or []), "written_ids": [],
+                "pending_qa_ids": [], "pending_repair_ids": [], "pass_ids": [],
+                "pending_publish_ids": [], "published_ids": [],
+                "last_completed_step": "qa", "started_at": "2026-09-27T00:00:00Z",
+                "updated_at": updated_at, "chunks_completed": 0,
+                "publish_operations": 0,
+            }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        def run_liveness():
+            env = dict(os.environ, CONTENT_MATRIX=str(m), WRITER_CHECKPOINT=str(cp),
+                       PROGRESS_FILE=str(prog), FACTORY_THROUGHPUT=str(thr),
+                       TXN_FILE=str(txn), LOCK_FILE=str(lock),
+                       LIVENESS_STALL_HOURS="6", LIVENESS_LOCK_STALE_HOURS="6")
+            return sh(sys.executable, "scripts/factory_liveness.py", env=env)
+
+        def iso(delta_hours=0.0):
+            return time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                 time.gmtime(time.time() - delta_hours * 3600))
+
+        def clean():
+            for p in (lock, txn, cp):
+                if p.exists():
+                    p.unlink()
+
+        # --- healthy idle: PLANNED rows alone are NOT a stall -------------
+        clean()
+        write_matrix()
+        write_checkpoint(iso(48))
+        m_before = m.read_bytes()
+        cp_before = cp.read_bytes()
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: PLANNED rows + resting writer => HEALTHY_IDLE rc 0",
+              r.returncode == 0 and j["status"] == "HEALTHY_IDLE" and
+              "VANCHINH_FACTORY_LIVENESS_PASS" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("liveness: checker is read-only (matrix untouched)",
+              m.read_bytes() == m_before)
+        check("liveness: checker is read-only (checkpoint untouched)",
+              cp.read_bytes() == cp_before)
+
+        # --- healthy active: in-flight rows + fresh checkpoint -------------
+        ids = [pub_rows[0]["article_id"], pub_rows[1]["article_id"]]
+        write_matrix({ids[0]: "WRITING", ids[1]: "QA"})
+        write_checkpoint(iso(0.5), chunk_ids=ids)
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: in-flight + fresh progress => HEALTHY_ACTIVE rc 0",
+              r.returncode == 0 and j["status"] == "HEALTHY_ACTIVE",
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- fresh lock does not fail healthy active work ------------------
+        lock.write_text(json.dumps({"operator": "test", "acquired": iso(0.2)}),
+                        encoding="utf-8")
+        r = run_liveness()
+        check("liveness: fresh lock + active work stays PASS",
+              r.returncode == 0 and "HEALTHY_ACTIVE" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        clean()
+
+        # --- stalled WRITING beyond threshold -------------------------------
+        write_checkpoint(iso(10))
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: stalled WRITING => STALLED_ACTIVE rc 1",
+              r.returncode == 1 and j["status"] == "STALLED_ACTIVE" and
+              "VANCHINH_FACTORY_LIVENESS_FAIL" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- stalled PASS beyond threshold ----------------------------------
+        write_matrix({ids[0]: "PASS", ids[1]: "PUBLISHED"})
+        write_checkpoint(iso(10), chunk_ids=[ids[0]])
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: stalled PASS => STALLED_ACTIVE rc 1",
+              r.returncode == 1 and j["status"] == "STALLED_ACTIVE",
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- stale txn marker always FAILs first ----------------------------
+        txn.parent.mkdir(parents=True, exist_ok=True)
+        txn.write_text(json.dumps({"plan": {"articles": []}, "state": "IN_PROGRESS"}),
+                        encoding="utf-8")
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: pending txn => STALE_TXN rc 1",
+              r.returncode == 1 and j["status"] == "STALE_TXN" and
+              "VANCHINH_FACTORY_LIVENESS_FAIL" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("liveness: stale txn marker kept (read-only)", txn.exists())
+        txn.unlink()
+
+        # --- stale lock with unfinished work => FAIL -------------------------
+        write_matrix()  # PLANNED rows exist
+        write_checkpoint(iso(0.5))
+        lock.write_text(json.dumps({"operator": "gone", "acquired": iso(10)}),
+                        encoding="utf-8")
+        old = time.time() - 10 * 3600
+        os.utime(lock, (old, old))
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: stale lock + unfinished work => FAIL rc 1",
+              r.returncode == 1 and
+              j["status"] == "EXPIRED_OR_STALE_LOCK_WITH_UNFINISHED_WORK",
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("liveness: stale lock kept (read-only)", lock.exists())
+
+        # --- fresh lock + only PLANNED rows => HEALTHY_IDLE ------------------
+        fresh = time.time()
+        os.utime(lock, (fresh, fresh))
+        r = run_liveness()
+        check("liveness: fresh lock + PLANNED only => HEALTHY_IDLE rc 0",
+              r.returncode == 0 and "HEALTHY_IDLE" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        clean()
+
+        # --- stale checkpoint: chunk ids unknown / still PLANNED ------------
+        write_matrix()
+        write_checkpoint(iso(0.5), chunk_ids=[planned_rows[0]["article_id"],
+                                              "ZZ-9999"])
+        r = run_liveness()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY_LIVENESS_")[0])
+        check("liveness: checkpoint chunk vs matrix disagreement => CHECKPOINT_STALE rc 1",
+              r.returncode == 1 and j["status"] == "CHECKPOINT_STALE" and
+              j.get("conflict_ids") == sorted([planned_rows[0]["article_id"], "ZZ-9999"]),
+              f"rc={r.returncode} {r.stdout[-300:]}")
+
+        # --- all-terminal matrix + stale lock => still HEALTHY_IDLE -----------
+        write_matrix(all_published=True)
+        write_checkpoint(iso(48))
+        lock.write_text(json.dumps({"operator": "gone", "acquired": iso(10)}),
+                        encoding="utf-8")
+        os.utime(lock, (old, old))
+        r = run_liveness()
+        check("liveness: stale lock without unfinished work => HEALTHY_IDLE rc 0",
+              r.returncode == 0 and "HEALTHY_IDLE" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        clean()
+
+        # --- production isolation ----------------------------------------------
+        check("liveness tests never create production txn marker",
+              not prod_txn.exists())
+        check("liveness tests never create production lock",
+              not prod_lock.exists())
+    check("production matrix untouched by liveness tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def test_progress():
     out = fc.write_progress()
     rows = fc.load_matrix()
@@ -1358,6 +1544,7 @@ def main():
     test_fixture_qa()
     test_txn_and_lock()
     test_recover_fail_closed()
+    test_factory_liveness()
     test_progress()
     test_hub_generation()
     test_taxonomy()
