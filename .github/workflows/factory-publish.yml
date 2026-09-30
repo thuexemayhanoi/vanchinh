@@ -35,6 +35,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Select push scope (exact IDs derived from added/modified article files)
         id: select
         run: |
@@ -98,6 +101,15 @@ jobs:
       - name: Matrix validation (pre-push gate)
         if: steps.select.outputs.proceed == 'true'
         run: python3 scripts/validate_content_matrix.py
+      - name: Matrix sync check (pre-push gate: matrix must equal generator output)
+        if: steps.select.outputs.proceed == 'true'
+        run: python3 scripts/check_matrix_sync.py
+      - name: Cannibalization check (pre-push gate)
+        if: steps.select.outputs.proceed == 'true'
+        run: python3 scripts/check_cannibalization.py
+      - name: Node matrix fallback (pre-push gate parity)
+        if: steps.select.outputs.proceed == 'true'
+        run: node scripts/validate_content_matrix.mjs
       - name: Commit publish results (single commit per chunk)
         if: steps.select.outputs.proceed == 'true'
         run: |
