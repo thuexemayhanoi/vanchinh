@@ -1,0 +1,21 @@
+{
+  "article_id": "HD-0185",
+  "word_count": 1423,
+  "seo_score": 88,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 16,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [
+    "title competes with a protected commercial intent"
+  ],
+  "recommendations": [
+    "aim for 1600-2000 useful words",
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
