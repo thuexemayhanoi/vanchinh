@@ -1,0 +1,20 @@
+{
+  "article_id": "HD-0188",
+  "word_count": 1613,
+  "seo_score": 90,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [
+    "title competes with a protected commercial intent"
+  ],
+  "recommendations": [
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
