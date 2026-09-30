@@ -435,7 +435,9 @@
     "HD-0299",
     "HD-0300",
     "KN-0001",
-    "KN-0002"
+    "KN-0002",
+    "KN-0003",
+    "KN-0004"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1743,11 +1745,13 @@
     "HD-0299",
     "HD-0300",
     "KN-0001",
-    "KN-0002"
+    "KN-0002",
+    "KN-0003",
+    "KN-0004"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T22:11:49Z",
-  "chunks_completed": 222,
-  "publish_operations": 222
+  "updated_at": "2026-09-30T22:13:34Z",
+  "chunks_completed": 223,
+  "publish_operations": 223
 }
