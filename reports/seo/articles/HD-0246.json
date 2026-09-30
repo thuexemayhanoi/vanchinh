@@ -1,0 +1,18 @@
+{
+  "article_id": "HD-0246",
+  "word_count": 1710,
+  "seo_score": 95,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "title competes with a protected commercial intent"
+  ],
+  "recommendations": []
+}
