@@ -59,6 +59,21 @@ FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trư�
 - Scope của workflow do `scripts/factory_push_selection.py` derive từ `git diff` — deterministic, không AI/API key.
 - Shell không được đổi URL/canonical/JSON-LD/prose; CTA phải resolve từ business-facts, không hard-code.
 
+## 4-Tier Verification Contract
+
+"CI GREEN" KHÔNG đồng nghĩa production-safe. Chỉ được coi production-safe khi TOÀN BỘ tier áp dụng cho change đó PASS. Chi tiết từng tier: docs/CONTENT-FACTORY.md §4-Tier.
+
+- TIER 1 — UNIT: `python3 tests/run_tests.py` (unit/regression/state-machine, pure deterministic). Test KHÔNG BAO GIỜ mutate production state.
+- TIER 2 — INTEGRATION: claim → QA → publish sandbox E2E; writer-required resume; push selection; repair flow; deterministic derived outputs (sitemap/hub/shell byte-identical khi rebuild).
+- TIER 3 — PRODUCTION INVARIANT: matrix validation (py + node), matrix sync, site validation, cannibalization, published file tồn tại, sitemap == PUBLISHED truth, hub == PUBLISHED truth, KHÔNG txn/lock sau publish thành công, không production state drift. Driver continuous: `run_continuous_factory.py validate` fail-closed.
+- TIER 4 — LONG-RUN / FAILURE RECOVERY / LIVENESS: `python3 tests/factory_soak.py` (multi-chunk soak + fault injection + restart/recover, sandbox fixture); `python3 scripts/factory_liveness.py` (watchdog READ-ONLY: HEALTHY_IDLE/HEALTHY_ACTIVE/STALLED_ACTIVE/STALE_TXN/STALE_LOCK/CHECKPOINT_STALE).
+
+Phạm vi bắt buộc:
+
+- Change engine/ workflow/ recovery → TIER 1 + 2 + 3 + 4 bắt buộc.
+- Change content-only (bài viết) → tier theo scope, nhưng publish gate hiện hữu vẫn bắt buộc.
+- KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
+
 ## Sau mọi thay đổi
 
 - Chạy full gates: `python3 tests/run_tests.py`, `scripts/validate_site.py`, `scripts/validate_content_matrix.py`, `node scripts/validate_content_matrix.mjs`, `scripts/check_matrix_sync.py`, `scripts/check_cannibalization.py`.

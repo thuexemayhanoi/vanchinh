@@ -19,8 +19,8 @@ Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ s�
 1. Chốt lock/txn sạch trước khi mutate.
 2. Xác định active batch deterministic: batch đầu tiên (theo thứ tự matrix) còn row chưa terminal (terminal: PUBLISHED, BLOCKED, FAIL). Không còn batch chưa hoàn tất -> bỏ qua publish.
 3. NEW/BACKLOG: `claim <active> --ids <exact ids>`: đúng các row có file -> WRITING. REPAIR: không claim, chỉ `qa <active> --ids <repaired ids>` (qa --ids được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS).
-4. `publish <active> --ids <pass ids>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Shell rebuild thất bại → rollback toàn bộ (row về PASS, marker xóa).
-5. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix TRƯỚC khi push (gate trước publish).
+4. `publish <active> --ids <pass ids>`: grouped transactional publish — chỉ row quality PASS VÀ SEO >= 90, không critical; publish cập nhật matrix, hubs, sitemap, article shells, checkpoint, reports trong MỘT transaction có marker. Rollback FAIL-CLOSED: sitemap/hub/shell regen thất bại → row về PASS + regen lại; CHỈ xóa marker khi regen xác minh PASS (rc 0); regen rollback fail → giữ marker + "rollback incomplete: run recover" (docs/RECOVERY.md).
+5. Chạy lại toàn bộ test suite + validate_site + validate_content_matrix + check_matrix_sync + check_cannibalization + node validate_content_matrix.mjs TRƯỚC khi commit derived state (gate trước commit; thiếu bất kỳ gate nào đỏ → KHÔNG commit derived state).
 6. MỘT commit cho toàn bộ derived state của chunk; push; assert không sót lock/txn marker.
 
 ## Quy tắc an toàn

@@ -42,3 +42,13 @@ Chạy từ repo root. Mọi mục critical phải PASS trước khi push.
 
 - [ ] Verify remote HEAD (SHA + message khớp local commit)
 - [ ] Verify Pages deployment: mở https://thuexemayhanoi.github.io/vanchinh/ và một trang con, kiểm canonical + giờ 09:00–17:00 hiển thị đúng
+
+## 7. 4-Tier Verification Contract (AGENTS.md, docs/CONTENT-FACTORY.md §4-Tier)
+
+"CI GREEN" KHÔNG đồng nghĩa production-safe nếu tier áp dụng cho change chưa PASS. Change engine/ workflow/ recovery → đủ 4 tier:
+
+- [ ] TIER 1 (UNIT): `python3 tests/run_tests.py` → 0 failed; test không mutate production state
+- [ ] TIER 2 (INTEGRATION): sandbox E2E claim → QA → publish; writer-required resume; push selection; repair flow; derived outputs deterministic
+- [ ] TIER 3 (PRODUCTION INVARIANT): validate_content_matrix (py + node), check_matrix_sync, check_cannibalization, validate_site, sitemap == PUBLISHED, hub == PUBLISHED, KHÔNG txn/lock sau publish; `run_continuous_factory.py validate` fail-closed
+- [ ] TIER 4 (LONG-RUN/ FAILURE RECOVERY/ LIVENESS): `python3 tests/factory_soak.py` PASS (fault injection + restart/recover + không drift production); `python3 scripts/factory_liveness.py` verdict hợp lệ (watchdog READ-ONLY, KHÔNG tự recover/ xóa lock/ claim/ publish)
+- [ ] KHÔNG tuyên bố "factory fixed" chỉ vì unit tests xanh

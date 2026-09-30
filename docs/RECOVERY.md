@@ -21,7 +21,14 @@ ghi marker → thực hiện writes → post-write consistency check → xóa ma
 python3 scripts/run_article_batch.py recover
 ```
 
-Hành vi: đọc marker → kiểm từng planned write: đã nhất quán → giữ và hoàn tất các bước còn lại; chưa nhất quán → hoàn tác về pre-state (không publish dở). Chỉ xóa marker khi consistency PASS. Recover không bao giờ phát sinh publish nửa vời.
+Hành vi FAIL-CLOSED (hợp đồng bắt buộc):
+
+- Recovery chỉ được xóa marker khi xác minh được trạng thái DETERMINISTIC và consistency PASS:
+  - verified rollback: mọi article trong plan vẫn ở pre-state (PASS) + file tồn tại → rollback hoàn tất, regen sitemap/hub xác minh OK → mới xóa marker.
+  - verified completion: mọi article PUBLISHED + file tồn tại → regen + xác minh các derived output (sitemap, hubs, shells, progress) → mới xóa marker.
+- Bất kỳ ambiguity/ conflict (file missing, matrix/file disagreement, partial publish, malformed marker/ plan, unknown plan id, PUBLISHED-without-file, rollback regen FAIL) → GIỮ NGUYÊN marker, exit non-zero, báo chính xác article/ state/ file conflict, yêu cầu operator xử lý. KHÔNG publish tiếp khi còn marker.
+- Recover KHÔNG BAO GIỜ: tự đoán trạng thái đúng; xóa marker khi consistency chưa PASS; force-clear; reset repair count; reset/ ghi lại matrix.
+- Publish rollback (sitemap/hub/shell regen fail) tuân cùng hợp đồng: chỉ xóa marker khi rollback regen xác minh PASS; ngược lại giữ marker + "rollback incomplete: run recover".
 
 ## Lock
 

@@ -120,6 +120,43 @@ Mỗi bài PUBLISHED được `scripts/build_article_shell.py` bọc bằng chro
 
 `scripts/generate_sitemap.py` chỉ thêm URL bài ở trạng thái PUBLISHED. Không URL PLANNED/WRITING/QA/REVIEW/REPAIR/PASS-chưa-publish/broken. Base: `https://thuexemayhanoi.github.io/vanchinh/`.
 
+## 4-Tier Verification Contract
+
+Hợp đồng bắt buộc (AGENTS.md tham chiếu mục này). "CI GREEN" KHÔNG đồng nghĩa production-safe nếu tier áp dụng cho change đó chưa PASS.
+
+### TIER 1 — UNIT
+
+- Unit/ regression/ state-machine tests, pure deterministic checks: `python3 tests/run_tests.py`.
+- Bao phủ: state transitions, matrix integrity, txn/lock semantics, fail-closed recover (fault injection), fail-closed driver gate, push selection, SEO scorer, hub/sitemap invariants.
+- Test KHÔNG BAO GIỜ mutate production state — fixture dùng `CONTENT_MATRIX` / `WRITER_CHECKPOINT` / `LOCK_FILE` / `TXN_FILE` / `PROGRESS_FILE` / `FACTORY_THROUGHPUT` trỏ temp dir.
+
+### TIER 2 — INTEGRATION
+
+- Claim → writer fixture → QA → PASS → publish sandbox E2E nhiều chu kỳ (trong `tests/run_tests.py`: chunked factory, claim-resume-repair, continuous driver).
+- Writer-required resume (row WRITING không có file → REPAIR/BLOCKED, không phá batch khác), push selection (NEW/REPAIR/BACKLOG/SKIP từ git diff), repair flow (re-score row WRITING/QA/REVIEW/REPAIR/PASS), deterministic derived outputs (sitemap/hub/shell rebuild byte-identical).
+
+### TIER 3 — PRODUCTION INVARIANT
+
+- `scripts/validate_content_matrix.py` + `node scripts/validate_content_matrix.mjs` (2000 rows, 40×50, id/path unique, category hợp lệ).
+- `scripts/check_matrix_sync.py` (matrix == generator output).
+- `scripts/check_cannibalization.py` (không keyword xâm phạm intent bảo vệ).
+- `scripts/validate_site.py` (1 H1, canonical unique + khớp path, không broken link/asset).
+- Published file tồn tại đúng output_path; sitemap == PUBLISHED truth; hub lists == PUBLISHED truth theo category.
+- KHÔNG txn (`data/batches/txn/txn.json`) / lock (`data/batches/lock.json`) sau publish thành công; không production state drift.
+- Continuous driver (`scripts/run_continuous_factory.py`) fail-closed: bất kỳ validator FAIL → status BLOCKED, exit != 0, KHÔNG in marker CONTINUING. Subcommand: `run_continuous_factory.py validate`.
+
+### TIER 4 — LONG-RUN / FAILURE RECOVERY / LIVENESS
+
+- Soak: `python3 tests/factory_soak.py` — multi-chunk sandbox (temp fixture, KHÔNG dùng production matrix, KHÔNG publish bài thật): nhiều chu kỳ claim → writer fixture → QA → PASS → publish → verify, inject lỗi có kiểm soát (after begin_txn, after partial writes, sitemap fail, hub fail, stale lock, restart → recover, retry publish), assert mỗi chu kỳ: txn/lock sạch, checkpoint khớp matrix, không skip ID, không publish trùng, counter monotonic, sitemap/hub chỉ chứa PUBLISHED, không trang mồ côi, không leak draft/test, production tree byte-identical sau test.
+- Recovery fail-closed (docs/RECOVERY.md): recover KHÔNG xóa marker khi chưa chứng minh được trạng thái deterministic.
+- Liveness watchdog: `python3 scripts/factory_liveness.py` — READ-ONLY tuyệt đối (không recover, không xóa lock, không claim, không publish). Verdict: HEALTHY_IDLE / HEALTHY_ACTIVE (PASS), STALLED_ACTIVE / STALE_TXN / EXPIRED_OR_STALE_LOCK_WITH_UNFINISHED_WORK / CHECKPOINT_STALE (FAIL). Row PLANNED đơn thuần KHÔNG phải stall; writer nghỉ hợp lệ + không in-flight work = HEALTHY_IDLE. CI định kỳ: `.github/workflows/factory-liveness.yml` (contents: read, không push).
+
+### Phạm vi bắt buộc
+
+- Change engine/ workflow/ recovery/ scripts → TIER 1 + 2 + 3 + 4.
+- Change content-only (bài viết) → tier phù hợp scope; publish gate hiện hữu vẫn bắt buộc.
+- KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
+
 ## Không trùng lặp liên site
 
 Nội dung phải viết độc lập cho site Văn Chính. Cấm copy/spin từ `thuexemayhanoi/shop`. Tooling và kiến trúc có thể giống; nội dung thì không.

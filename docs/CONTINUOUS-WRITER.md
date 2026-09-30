@@ -53,3 +53,12 @@ Dừng tạm do rate-limit/ lỗi connector tạm thời KHÔNG PHẢI quyền r
 - `factory-publish.yml` tự push derived state → luôn fetch fresh main trước chunk kế; không push từ HEAD cũ; không force push.
 - Batch active phải terminal trước khi sang batch khác; `next_batch` không phải quyền claim.
 - MATRIX là source of truth; checkpoint là derived operational state.
+
+## Verify theo 4-Tier Verification Contract
+
+VERIFY trong loop này là "workflow green + Pages deploy + no lock/txn" của đúng SHA vừa push — KHÔNG thay thế 4-Tier Verification Contract (AGENTS.md, docs/CONTENT-FACTORY.md §4-Tier):
+
+- "CI GREEN" KHÔNG đồng nghĩa production-safe nếu tier áp dụng cho change đó chưa PASS.
+- Change engine/ workflow/ recovery → TIER 1 + 2 + 3 + 4 bắt buộc trước khi coi là đã fix.
+- Change content-only (bài viết) → tier theo scope; publish gate hiện hữu vẫn bắt buộc.
+- KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
