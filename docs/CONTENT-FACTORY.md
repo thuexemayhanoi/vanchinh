@@ -39,11 +39,11 @@ Terminal: FAIL, BLOCKED
 
 ## Production mode (Simple Production Mode, canonical)
 
-Batch = chunk = 50 bài; writer viết và push tối đa 50 bài mới một lượt:
+Chunk làm việc = 2 bài (MICRO CONTINUOUS LOOP; batch 50 bài vẫn là đơn vị tổ chức matrix); writer viết và push 2 bài mới mỗi lượt rồi lặp liên tục (≤ 50 file mới/push là hard max workflow):
 
 ```bash
-python3 scripts/run_article_batch.py claim B01 --limit 50  # batch chuẩn (max 50)
-# writer viết 50 file; qa scoped; publish grouped
+python3 scripts/run_article_batch.py claim B01 --limit 2   # micro chunk chuẩn (max 50 vẫn là hard invariant)
+# writer viết 2 file; qa scoped; publish grouped
 python3 scripts/run_article_batch.py qa B01                 # scoped theo checkpoint current chunk / --ids
 python3 scripts/run_article_batch.py publish B01            # grouped publish batch hiện tại
 python3 scripts/run_article_batch.py checkpoint             # xem trạng thái checkpoint
@@ -64,18 +64,18 @@ Quy tắc:
 
 ## Vòng đời một batch (Simple Production Mode)
 
-Batch = chunk = 50 bài, writer viết cả batch rồi push một lượt (xem docs/CONTINUOUS-WRITER.md):
+Chunk = 2 bài, writer viết từng cặp 2 bài rồi push một lượt (micro continuous loop; xem docs/CONTINUOUS-WRITER.md):
 
 ```bash
 python3 scripts/run_article_batch.py progress          # xác định active batch (batch đầu tiên còn row chưa terminal)
-# → writer chọn tối đa 50 row PLANNED (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
-# → local scoped QA → PUSH batch (≤ 50 file mới) → factory-publish.yml: claim đúng ID có file → qa → publish
+# → writer chọn 2 row PLANNED kế tiếp (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
+# → local scoped QA → PUSH 2 (file mới; ≤ 50 file mới là hard max) → factory-publish.yml: claim đúng ID có file → qa → publish
 python3 scripts/run_article_batch.py checkpoint          # xác nhận batch đã reconcile
-# → FETCH FRESH MAIN → batch ≤ 50 kế tiếp → LẶP LẠI
+# → FETCH FRESH MAIN → cặp 2 bài kế tiếp → LẶP LẠI
 python3 scripts/run_article_batch.py recover            # chỉ khi run bị gián đoạn giữa chừng
 ```
 
-Không dừng chờ phê duyệt giữa các batch, không dừng sau một batch: sau khi factory-publish xanh, fetch fresh main và viết ngay batch kế tiếp. Không chạy full-site audit sau mỗi batch — full audit toàn site chạy một lần khi đủ 2.000 bài.
+Không dừng chờ phê duyệt giữa các cặp, không dừng sau một cặp 2 bài: sau khi factory-publish xanh, fetch fresh main và viết ngay cặp 2 bài kế tiếp. Không chạy full-site audit sau mỗi chunk — full audit toàn site chạy một lần khi đủ 2.000 bài.
 
 Node fallback (Python không khả dụng): `node scripts/validate_content_matrix.mjs`, `node scripts/run_article_batch.mjs plan B01`, `node scripts/run_article_batch.mjs progress`.
 

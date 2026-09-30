@@ -2,12 +2,13 @@
 
 Tài liệu này là nguồn chuẩn duy nhất cho cách một writer run (agent AI bên ngoài) PHẢI hoạt động liên tục. README §24 và AGENTS.md tham chiếu tài liệu này.
 
-## Mô hình canonical (Simple Production Mode)
+## Mô hình canonical (Simple Production Mode — MICRO CONTINUOUS LOOP)
 
-- Batch = chunk = 50 bài (B01–B40, tổng 2.000). Production loop: WRITE 50 → LIGHT QA → PUBLISH → NEXT 50 → REPEAT.
-- Push = TỐI ĐA 50 file bài MỚI một lần (một push = một batch; phần dư cuối < 50 được phép). Push > 50 file mới → `factory-publish.yml` REFUSE.
-- GitHub Actions (`factory-publish.yml`) là event-driven: claim đúng ID có file → scoped QA → publish → push derived state. Actions KHÔNG viết prose, KHÔNG gọi Mistral, KHÔNG schedule writer, KHÔNG tự tạo batch kế tiếp.
-- Sau publish thành công, trách nhiệm QUAY VỀ writer: fetch fresh main và viết batch kế tiếp ngay nếu runtime còn.
+- Chunk làm việc = 2 bài mỗi lượt writer (micro push). Production loop: WRITE 2 → SCOPED QA → PUSH 2 → WAIT CI GREEN → NEXT 2 → REPEAT. Lý do: push sớm từng cặp 2 bài tạo safe checkpoint trên main, chống mất tiến độ khi workspace reset; KHÔNG giữ nhiều bài chưa push trong workspace.
+- Batch (B01–B40, tổng 2.000) vẫn là đơn vị tổ chức của matrix; writer làm việc theo các cặp 2 bài liên tiếp trong batch active cho đến khi batch đó terminal.
+- Push = TỐI ĐA 50 file bài MỚI một lần vẫn là hard invariant của workflow (push > 50 file mới → `factory-publish.yml` REFUSE); micro loop chuẩn push đúng 2 file mới mỗi lần.
+- GitHub Actions (`factory-publish.yml`) là event-driven: claim đúng ID có file → scoped QA → publish → push derived state. Actions KHÔNG viết prose, KHÔNG gọi Mistral, KHÔNG schedule writer, KHÔNG tự tạo chunk kế tiếp.
+- Sau publish thành công, trách nhiệm QUAY VỀ writer: fetch fresh main và viết cặp 2 bài kế tiếp NGAY nếu runtime còn.
 
 ## LOOP (bắt buộc mỗi writer run)
 
@@ -15,19 +16,19 @@ Tài liệu này là nguồn chuẩn duy nhất cho cách một writer run (agen
 FETCH FRESH MAIN
 → RECOVER IF NEEDED (txn marker)
 → RESUME (hoàn tất dở: REPAIR/QA/PASS pending của active batch)
-→ WRITE <= 50 (file bài thật theo matrix + docs/ARTICLE-RULES.md)
-→ LOCAL SCOPED QA (quality + SEO >= 80, không hạ threshold)
-→ PUSH BATCH (≤ 50 file mới)
-→ WAIT factory-publish.yml
+→ WRITE 2 (file bài thật theo matrix + docs/ARTICLE-RULES.md)
+→ LOCAL SCOPED QA (quality PASS + SEO >= 80, không hạ threshold, không critical)
+→ PUSH 2 (file mới; safe checkpoint trên main)
+→ WAIT factory-publish.yml + CI GREEN
 → VERIFY (workflow green, Pages deploy, no lock/txn)
 → FETCH FRESH MAIN
-→ NEXT <= 50
-→ REPEAT
+→ WRITE 2 NEXT
+→ REPEAT (không dừng sau mỗi cặp 2 bài)
 ```
 
 ## Không được dừng vì
 
-- 50 bài vừa publish
+- 2 bài vừa publish (một micro chunk vừa xong)
 - một workflow vừa xanh
 - một Pages deploy vừa xong
 - một batch vừa terminal
@@ -46,9 +47,9 @@ Dừng tạm do rate-limit/ lỗi connector tạm thời KHÔNG PHẢI quyền r
 
 ## Quy tắc an toàn mỗi vòng
 
-- Mỗi batch: FETCH → RECOVER → RESUME → WRITE → QA → PUSH → VERIFY → lặp.
+- Mỗi cặp 2 bài: FETCH → RECOVER → RESUME → WRITE 2 → QA → PUSH 2 → VERIFY → lặp.
 - Một writer/ operator duy nhất được mutate production; lock/ txn của operator khác → không cạnh tranh.
-- `factory-publish.yml` tự push derived state → luôn fetch fresh main trước chunk kế; không push từ HEAD cũ; không force push.
+- `factory-publish.yml` tự push derived state → luôn fetch fresh main trước cặp kế; không push từ HEAD cũ; không force push.
 - Batch active phải terminal trước khi sang batch khác; `next_batch` không phải quyền claim.
 - MATRIX là source of truth; checkpoint là derived operational state.
 

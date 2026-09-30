@@ -4,7 +4,7 @@
 
 ## Event-driven — KHÔNG phải scheduler
 
-Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ sửa file bài trong `cam-nang/`. Nó KHÔNG: viết prose, gọi Mistral, schedule writer, hay tự tạo chunk kế tiếp. Sau khi publish thành công, trách nhiệm QUAY VỀ external writer: writer phải fetch fresh main và viết ngay batch ≤ 50 kế tiếp theo continuous-run contract (docs/CONTINUOUS-WRITER.md). Nếu session writer đã kết thúc, factory đứng yên ở trạng thái sạch — không thành phần nào trong repo tự tiếp tục sản xuất nội dung.
+Workflow CHỈ được kích hoạt bởi push hợp lệ lên `main` thêm/ sửa file bài trong `cam-nang/`. Nó KHÔNG: viết prose, gọi Mistral, schedule writer, hay tự tạo chunk kế tiếp. Sau khi publish thành công, trách nhiệm QUAY VỀ external writer: writer phải fetch fresh main và viết ngay cặp 2 bài kế tiếp theo micro continuous loop contract (docs/CONTINUOUS-WRITER.md). Nếu session writer đã kết thúc, factory đứng yên ở trạng thái sạch — không thành phần nào trong repo tự tiếp tục sản xuất nội dung.
 
 ## Vai trò
 

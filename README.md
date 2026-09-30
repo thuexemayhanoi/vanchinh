@@ -205,7 +205,7 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 
 ## 21c. Content factory production mode (Simple Production Mode)
 
-- Batch = chunk = 50 bài: writer viết và push tối đa 50 bài mới một lượt (một push = một batch). 40 batch × 50 bài = 2.000 dòng matrix. Production loop: WRITE 50 → LIGHT QA → PUBLISH → NEXT 50 → REPEAT. Không over-engineer workflow; full audit toàn site chỉ chạy một lần khi đủ 2.000 bài.
+- Chunk làm việc = 2 bài (MICRO CONTINUOUS LOOP): writer viết và push 2 bài mới mỗi lượt rồi lặp liên tục; mỗi cặp 2 bài được push sớm làm safe checkpoint chống mất tiến độ khi workspace reset. 40 batch × 50 bài = 2.000 dòng matrix. Hard max workflow giữ nguyên: một push ≤ 50 file bài mới. Production loop: WRITE 2 → SCOPED QA → PUSH 2 → WAIT CI → NEXT 2 → REPEAT. Không over-engineer workflow; full audit toàn site chỉ chạy một lần khi đủ 2.000 bài.
 - Lệnh: `claim B01 --limit 50` (claim đúng 50 row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA), `publish B01` (grouped publish PASS).
 - Invariant batch hiện tại: batch đang chạy PHẢI hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch ≠ batch chưa hoàn thành đầu tiên (theo thứ tự matrix). Trạng thái terminal cho phép chuyển batch: PUBLISHED, BLOCKED, FAIL. Hệ quả: không bao giờ nhảy sang B02 khi B01 còn row chưa terminal; `next_batch` trong progress report CHỈ là batch kế tiếp chưa có bài published, KHÔNG phải quyền claim.
 - Publish yêu cầu: quality PASS VÀ SEO score >= 80 VÀ không critical.
@@ -256,10 +256,10 @@ Writer là agent AI bên ngoài (Mistral run), KHÔNG phải GitHub Actions. L�
 1. Fetch fresh main, đọc theo read order §21.
 2. Kiểm lock/txn; nếu marker pending → recover trước.
 3. Hoàn tất REPAIR/QA/PASS pending của batch active TRƯỚC khi làm work mới.
-4. Viết TỐI ĐA 50 file bài mới (batch chuẩn 50; phần dư cuối < 50 được phép), local scoped QA, push đúng batch đó. Một push = một batch.
-5. Chờ `factory-publish.yml` chạy xong → verify CI/ Pages → fetch fresh main → LẶP LẠI NGAY batch kế tiếp. Batch active phải terminal trước khi sang batch khác.
+4. Viết 2 file bài mới (micro chunk chuẩn; phần dư cuối < 2 được phép), local scoped QA, push đúng cặp đó. Một push = một micro chunk 2 bài (≤ 50 file mới là hard max workflow).
+5. Chờ `factory-publish.yml` chạy xong → verify CI/ Pages → fetch fresh main → LẶP LẠI NGAY cặp 2 bài kế tiếp. Batch active phải terminal trước khi sang batch khác.
 
-Writer KHÔNG được dừng chỉ vì 50 bài vừa publish, một workflow xong, một Pages deploy xong, một batch xong, hay report được sinh ra — đó là checkpoint, không phải điểm kết thúc. Chỉ dừng khi: (a) toàn bộ 2.000 row terminal hợp lệ, (b) runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc (c) blocker thật cần con người.
+Writer KHÔNG được dừng chỉ vì một cặp 2 bài vừa publish, một workflow xong, một Pages deploy xong, một batch xong, hay report được sinh ra — đó là checkpoint, không phải điểm kết thúc. Chỉ dừng khi: (a) toàn bộ 2.000 row terminal hợp lệ, (b) runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc (c) blocker thật cần con người.
 
 ## 25. Recovery sau lỗi runtime/tool
 
@@ -278,7 +278,7 @@ Nếu run bị gián đoạn: trạng thái repo (matrix + reports + txn marker)
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit trước push
 - [reports/audits/audit-2026-09-26.md](reports/audits/audit-2026-09-26.md) — audit foundation run- [docs/BUSINESS-FACTS.md](docs/BUSINESS-FACTS.md) — fact kinh doanh
 - [docs/RECOVERY.md](docs/RECOVERY.md) — transaction, lock, resume
-- [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md) — continuous-run contract cho external writer (batch ≤ 50, không dừng sau một batch)
+- [docs/CONTINUOUS-WRITER.md](docs/CONTINUOUS-WRITER.md) — continuous-run contract cho external writer (micro loop 2 bài/lượt, không dừng sau mỗi cặp 2 bài)
 - [docs/FACTORY-PUBLISH-WORKFLOW.md](docs/FACTORY-PUBLISH-WORKFLOW.md) — publish tự động
 - [docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — checklist audit
 - [AGENTS.md](AGENTS.md) — hợp đồng thực thi cho AI agent

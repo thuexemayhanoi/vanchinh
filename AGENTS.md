@@ -14,7 +14,7 @@ Hợp đồng ngắn gọn, bắt buộc với mọi AI agent làm việc trên 
 
 ## Batch / chunk
 
-- Batch = 50 bài (B01–B40, tổng 2.000). SIMPLE PRODUCTION MODE: batch = chunk = 50 bài. Writer/Mistral viết và push tối đa 50 bài mới/lượt (một push = một batch). Không còn pilot 5.
+- Batch = 50 bài (B01–B40, tổng 2.000) là đơn vị tổ chức matrix; chunk làm việc của writer = 2 bài (MICRO CONTINUOUS LOOP). Writer/Mistral viết và push 2 bài mới mỗi lượt rồi lặp liên tục; mỗi cặp 2 bài được push sớm làm safe checkpoint chống mất tiến độ khi workspace reset. Hard invariant workflow giữ nguyên: một push tối đa 50 file bài mới (`factory-publish.yml` refuse > 50). Không còn pilot 5.
 - INVARIANT: batch hiện tại chưa hoàn tất PHẢI hoàn tất trước. `claim` từ chối batch khác batch-chưa-hoàn-thành đầu tiên. KHÔNG bao giờ nhảy sang B02 khi B01 còn row chưa terminal. Terminal: PUBLISHED, BLOCKED, FAIL. `next_batch` trong progress report không phải quyền claim.
 - Thứ tự deterministic: batch_id + article_id. PUBLISHED không bao giờ bị claim lại.
 
@@ -32,12 +32,12 @@ RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA
 
 Mọi writer run TUÂN THEO vòng lặp liên tục trong docs/CONTINUOUS-WRITER.md:
 
-FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE ≤ 50 file bài (= 1 batch) → LOCAL SCOPED QA (quality + SEO ≥ 80) → PUSH BATCH (≤ 50 file mới) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → NEXT ≤ 50 → REPEAT.
+FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE 2 file bài (micro chunk) → LOCAL SCOPED QA (quality PASS + SEO ≥ 80, không critical) → PUSH 2 (file mới; safe checkpoint) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → WRITE 2 NEXT → REPEAT (không dừng sau mỗi cặp 2 bài).
 
-- KHÔNG kết thúc run sau một chunk thành công. Nếu không có blocker, bắt đầu NGAY chunk kế tiếp.
-- KHÔNG dừng chỉ vì 50 bài xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
+- KHÔNG kết thúc run sau một cặp 2 bài thành công. Nếu không có blocker, bắt đầu NGAY cặp 2 bài kế tiếp.
+- KHÔNG dừng chỉ vì một cặp 2 bài vừa xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
 - Chỉ dừng khi: 2.000 row terminal hợp lệ, runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc blocker thật cần con người.
-- Giữ nguyên: tối đa 50 file bài mới mỗi push; một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
+- Giữ nguyên: micro loop 2 bài/lượt push sớm (tối đa 50 file bài mới mỗi push là hard max workflow); một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
 
 ## Phân vai
 
