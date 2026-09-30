@@ -213,7 +213,17 @@
     "HD-0077",
     "HD-0078",
     "HD-0079",
-    "HD-0080"
+    "HD-0080",
+    "HD-0081",
+    "HD-0082",
+    "HD-0083",
+    "HD-0084",
+    "HD-0085",
+    "HD-0086",
+    "HD-0087",
+    "HD-0088",
+    "HD-0089",
+    "HD-0090"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1299,11 +1309,21 @@
     "HD-0077",
     "HD-0078",
     "HD-0079",
-    "HD-0080"
+    "HD-0080",
+    "HD-0081",
+    "HD-0082",
+    "HD-0083",
+    "HD-0084",
+    "HD-0085",
+    "HD-0086",
+    "HD-0087",
+    "HD-0088",
+    "HD-0089",
+    "HD-0090"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T06:33:29Z",
-  "chunks_completed": 118,
-  "publish_operations": 118
+  "updated_at": "2026-09-30T06:52:19Z",
+  "chunks_completed": 119,
+  "publish_operations": 119
 }
