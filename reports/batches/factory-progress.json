@@ -1,17 +1,17 @@
 {
-  "generated": "2026-09-30T00:04:20Z",
+  "generated": "2026-09-30T00:12:11Z",
   "total": 2000,
-  "planned": 1055,
+  "planned": 1050,
   "writing": 0,
   "qa": 0,
   "review": 0,
   "repair": 0,
   "pass": 0,
-  "published": 945,
+  "published": 950,
   "fail": 0,
   "blocked": 0,
-  "completed_batches": 18,
-  "active_batch": "B19",
+  "completed_batches": 19,
+  "active_batch": null,
   "next_batch": "B20",
   "published_commit_sha": ""
 }
