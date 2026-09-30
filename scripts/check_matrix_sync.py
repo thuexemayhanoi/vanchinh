@@ -8,12 +8,16 @@ On mismatch, prints up to 20 field-level diffs and exits 1.
 """
 import csv
 import io
+import os
 import pathlib
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-MATRIX = ROOT / "data" / "content-matrix.csv"
+# Env-overridable so tests/sandboxes can run this checker against a fixture
+# matrix without ever touching the production file. Default = production.
+MATRIX = pathlib.Path(os.environ.get("CONTENT_MATRIX",
+                                    str(ROOT / "data" / "content-matrix.csv")))
 
 
 def main():
@@ -45,7 +49,8 @@ def main():
             msg = f"{aid} {k}: committed={a.get(k, '')[:60]!r} generator={b.get(k, '')[:60]!r}"
             print("  " + msg)
             safe = msg.replace("%", "%25").replace("\r", " ").replace("\n", " ").replace('"', "'")
-            print(f"::error file=data/content-matrix.csv,title=Matrix out of sync::{safe}")
+            rel = MATRIX.relative_to(ROOT) if MATRIX.is_relative_to(ROOT) else MATRIX
+            print(f"::error file={rel},title=Matrix out of sync::{safe}")
         diffs += 1
         if diffs >= 20:
             print("  ... (further diffs suppressed)")

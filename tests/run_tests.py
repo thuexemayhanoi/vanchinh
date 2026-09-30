@@ -763,6 +763,180 @@ def test_continuous_factory():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_driver_fail_closed():
+    """FIX 1 regression: the continuous driver must FAIL CLOSED. Any
+    production invariant validator failure => BLOCKED verdict, non-zero
+    exit, failed validator named with output tail, NO CONTINUE/COMPLETE
+    marker; all validators PASS => normal CONTINUE/COMPLETE verdict.
+    Covers the shared validation_gate in process AND the `validate`
+    subcommand end-to-end (sandbox matrix via CONTENT_MATRIX; the
+    production matrix is never mutated by these tests)."""
+    import contextlib
+    import io
+    import run_continuous_factory as drv
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    orig_run_validations = drv.run_validations
+    before_bytes = orig_matrix.read_bytes()
+
+    def gate_out(mode, results):
+        buf = io.StringIO()
+        drv.run_validations = lambda: results
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = drv.validation_gate(ctx={"mode": "test"}, mode=mode)
+        finally:
+            drv.run_validations = orig_run_validations
+        return rc, buf.getvalue()
+
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        shutil.copyfile(orig_matrix, fc.MATRIX)
+        ok = {n: {"returncode": 0, "stdout_tail": "", "stderr_tail": ""}
+              for n, _ in drv.VALIDATION_CMDS}
+        # --- in-process gate: all validators PASS => CONTINUE allowed ------
+        rc, out = gate_out("run", {k: dict(v) for k, v in ok.items()})
+        j = json.loads(out.split("VANCHINH_FACTORY")[0])
+        check("gate: all validators PASS => rc 0 CONTINUE verdict",
+              rc == 0 and j["status"] == "CONTINUE", f"rc={rc} {out[-200:]}")
+        check("gate: all validators PASS prints CONTINUING marker",
+              "VANCHINH_FACTORY_CONTINUING" in out, out[-120:])
+        check("gate: all validators PASS has no BLOCKED marker",
+              "VANCHINH_FACTORY_BLOCKED" not in out)
+        # --- in-process gate: each single validator FAIL => BLOCKED ---------
+        for name in ("matrix", "site", "cannibalization", "matrix_sync"):
+            results = {k: ({"returncode": 1, "stdout_tail": f"{k} boom",
+                           "stderr_tail": ""} if k == name else dict(ok[k]))
+                       for k in ok}
+            rc, out = gate_out("run", results)
+            j = json.loads(out.split("VANCHINH_FACTORY")[0])
+            check(f"gate: {name} FAIL => rc 2 status BLOCKED",
+                  rc == 2 and j["status"] == "BLOCKED", f"rc={rc} {out[-200:]}")
+            check(f"gate: {name} FAIL names exactly the failed validator",
+                  j["failed_validators"] == [name], str(j.get("failed_validators")))
+            check(f"gate: {name} FAIL includes validator output tail",
+                  f"{name} boom" in json.dumps(j.get("failures", {}), ensure_ascii=False))
+            check(f"gate: {name} FAIL prints BLOCKED marker",
+                  "VANCHINH_FACTORY_BLOCKED" in out)
+            check(f"gate: {name} FAIL never prints CONTINUING/COMPLETE",
+                  "VANCHINH_FACTORY_CONTINUING" not in out and
+                  "VANCHINH_FACTORY_COMPLETE" not in out, out[-120:])
+        # --- all-terminal sandbox matrix + PASS => COMPLETE -----------------
+        rows = list(csv.DictReader(open(fc.MATRIX, encoding="utf-8", newline="")))
+        for x in rows:
+            x["status"] = "PUBLISHED"
+        with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        rc, out = gate_out("run", {k: dict(v) for k, v in ok.items()})
+        check("gate: all PASS + terminal matrix => rc 0 COMPLETE marker",
+              rc == 0 and "VANCHINH_FACTORY_COMPLETE" in out, out[-120:])
+        # --- validate mode: all PASS => VALIDATIONS_PASS --------------------
+        rc, out = gate_out("validate", {k: dict(v) for k, v in ok.items()})
+        check("gate: validate mode all PASS => rc 0 VALIDATIONS_PASS",
+              rc == 0 and "VANCHINH_FACTORY_VALIDATIONS_PASS" in out, out[-120:])
+
+        # --- end-to-end: `validate` subcommand vs sandbox matrix ------------
+        def sandbox(mutate=None):
+            shutil.copyfile(orig_matrix, fc.MATRIX)
+            if mutate:
+                rows = list(csv.DictReader(open(fc.MATRIX, encoding="utf-8", newline="")))
+                mutate(rows)
+                with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+                    w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                    w.writeheader()
+                    w.writerows(rows)
+
+        def run_validate():
+            env = dict(os.environ, CONTENT_MATRIX=str(fc.MATRIX),
+                       PROGRESS_FILE=str(tdp / "p.json"),
+                       WRITER_CHECKPOINT=str(fc.CHECKPOINT),
+                       FACTORY_THROUGHPUT=str(tdp / "t.json"))
+            return sh(sys.executable, "scripts/run_continuous_factory.py",
+                      "validate", env=env)
+
+        # baseline: byte-identical production copy => all validators PASS
+        sandbox()
+        r = run_validate()
+        check("driver validate: baseline copy => rc 0 + VALIDATIONS_PASS",
+              r.returncode == 0 and "VANCHINH_FACTORY_VALIDATIONS_PASS" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-300:]}")
+        check("driver validate: baseline prints no BLOCKED",
+              "VANCHINH_FACTORY_BLOCKED" not in r.stdout)
+
+        # matrix validator FAIL: invalid status value
+        sandbox(lambda rows: rows[0].__setitem__("status", "FOO"))
+        r = run_validate()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+        check("driver validate: matrix FAIL => rc 2 BLOCKED + no CONTINUING",
+              r.returncode == 2 and "VANCHINH_FACTORY_BLOCKED" in r.stdout and
+              "VANCHINH_FACTORY_CONTINUING" not in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("driver validate: matrix FAIL names matrix validator",
+              "matrix" in j["failed_validators"], str(j.get("failed_validators")))
+
+        # site validator FAIL: PLANNED row flipped PUBLISHED (sitemap/hub drift)
+        flip_id = next(x["article_id"] for x in
+                       csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))
+                       if x["status"] == "PLANNED")
+
+        def flip_published(rows):
+            for x in rows:
+                if x["article_id"] == flip_id:
+                    x["status"] = "PUBLISHED"
+        sandbox(flip_published)
+        r = run_validate()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+        check("driver validate: site FAIL => rc 2 BLOCKED + no CONTINUING",
+              r.returncode == 2 and "VANCHINH_FACTORY_BLOCKED" in r.stdout and
+              "VANCHINH_FACTORY_CONTINUING" not in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("driver validate: site FAIL names site validator",
+              "site" in j["failed_validators"], str(j.get("failed_validators")))
+
+        # cannibalization FAIL: a row claims the protected keyword
+        def steal_keyword(rows):
+            for x in rows:
+                if x["article_id"] == flip_id:
+                    x["primary_keyword"] = "thuê xe máy hà nội"
+        sandbox(steal_keyword)
+        r = run_validate()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+        check("driver validate: cannibalization FAIL => rc 2 BLOCKED + no CONTINUING",
+              r.returncode == 2 and "VANCHINH_FACTORY_BLOCKED" in r.stdout and
+              "VANCHINH_FACTORY_CONTINUING" not in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("driver validate: cannibalization FAIL names validator",
+              "cannibalization" in j["failed_validators"],
+              str(j.get("failed_validators")))
+
+        # matrix-sync FAIL: committed content field drifts from generator truth
+        def drift_title(rows):
+            for x in rows:
+                if x["article_id"] == flip_id:
+                    x["working_title"] = x["working_title"] + " (drifted)"
+        sandbox(drift_title)
+        r = run_validate()
+        j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
+        check("driver validate: matrix_sync FAIL => rc 2 BLOCKED + no CONTINUING",
+              r.returncode == 2 and "VANCHINH_FACTORY_BLOCKED" in r.stdout and
+              "VANCHINH_FACTORY_CONTINUING" not in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("driver validate: matrix_sync FAIL names validator",
+              "matrix_sync" in j["failed_validators"], str(j.get("failed_validators")))
+        # sync checker restored the sandbox matrix byte-identical every run
+        sandbox()
+        check("driver validate: sync checker restores sandbox matrix",
+              fc.MATRIX.read_bytes() == orig_matrix.read_bytes())
+        fc.MATRIX = orig_matrix
+        fc.CHECKPOINT = orig_checkpoint
+    check("production matrix untouched by driver fail-closed tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def test_push_selection_and_repair():
     """Push-scope selection + repair/resume regressions (workflow contract):
     (1) push adds 5 files -> exactly those 5 claimed, other PLANNED rows stay
@@ -966,6 +1140,7 @@ def main():
     test_chunked_factory()
     test_claim_resume_repair_rows()
     test_continuous_factory()
+    test_driver_fail_closed()
     test_push_selection_and_repair()
     test_seo_scorer()
     test_support_no_zalo()

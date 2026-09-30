@@ -14,8 +14,15 @@ because one batch or chunk finished:
         qa
         publish (transactional, PASS + seo >= 90)
         regenerate progress / throughput
-        validations (matrix, site, cannibalization, matrix sync, tests)
+        production invariant validations (FAIL-CLOSED: matrix, site,
+        cannibalization, matrix sync)
         report CONTINUE / COMPLETE / WRITER_REQUIRED / BLOCKED / FATAL_ERROR
+
+Validations are production invariants, NOT informational. If ANY validator
+fails the driver reports BLOCKED with a non-zero exit and does NOT print
+the CONTINUE/COMPLETE marker: the factory must not continue while an
+invariant is broken. `validate` runs the invariant gate standalone
+(read-only, same verdicts).
 
 The writer stage is external by design (prose is authored, not templated).
 Two supported writer modes:
@@ -38,6 +45,7 @@ Exit status JSON is printed on stdout; final line is one of:
   VANCHINH_FACTORY_WRITER_REQUIRED
   VANCHINH_FACTORY_BLOCKED
   VANCHINH_FACTORY_FATAL_ERROR
+  VANCHINH_FACTORY_VALIDATIONS_PASS   (validate subcommand only)
 """
 import argparse
 import json
@@ -100,6 +108,83 @@ def _chunk_files_exist(chunk_ids, rows):
         if not p.exists():
             missing.append(aid)
     return missing
+
+
+VALIDATION_CMDS = [
+    ("matrix", "validate_content_matrix.py"),
+    ("site", "validate_site.py"),
+    ("cannibalization", "check_cannibalization.py"),
+    ("matrix_sync", "check_matrix_sync.py"),
+]
+
+
+def run_validations():
+    """Run the production invariant validators and return per-validator
+    results with captured output tails. Callers MUST treat any non-zero
+    returncode as a blocker (fail-closed)."""
+    results = {}
+    for name, script in VALIDATION_CMDS:
+        v = _run([sys.executable, str(SCRIPTS_DIR / script)])
+        results[name] = {
+            "returncode": v.returncode,
+            "stdout_tail": v.stdout[-1500:],
+            "stderr_tail": v.stderr[-1500:],
+        }
+    return results
+
+
+def validation_verdicts(results):
+    return {name: ("PASS" if r["returncode"] == 0 else "FAIL")
+            for name, r in results.items()}
+
+
+def validation_gate(ctx=None, mode="run"):
+    """FAIL-CLOSED production invariant gate shared by `run` and `validate`.
+
+    Any validator FAIL => status BLOCKED, exit code 2, failed validators
+    named exactly with output tails, and NO CONTINUE/COMPLETE marker: the
+    factory must not claim or process the next chunk while an invariant
+    is broken. All validators PASS => normal verdict derived from the
+    matrix (run mode) or VALIDATIONS_PASS (validate mode).
+    """
+    results = run_validations()
+    verdicts = validation_verdicts(results)
+    failed = sorted(n for n, v in verdicts.items() if v == "FAIL")
+    after = status_snapshot()
+    out = dict(ctx or {})
+    out.update({
+        "status": "BLOCKED" if failed else after["factory_status"],
+        "published_total": after["published"],
+        "remaining": after["unfinished"],
+        "active_batch": after["active_batch"],
+        "next_article": after["next_article"],
+        "validations": verdicts,
+        "failed_validators": failed,
+        "checkpoint_clean": not fc.txn_pending(),
+    })
+    if failed:
+        out["reason"] = "production invariant validation failed"
+        out["failures"] = {n: results[n] for n in failed}
+        out["action"] = ("fix the failed validators and re-run; the factory must not "
+                         "continue until every production invariant passes")
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        print("VANCHINH_FACTORY_BLOCKED")
+        return 2
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    if mode == "validate":
+        print("VANCHINH_FACTORY_VALIDATIONS_PASS")
+        return 0
+    if after["factory_status"] == "COMPLETE":
+        print("VANCHINH_FACTORY_COMPLETE")
+    else:
+        print("VANCHINH_FACTORY_CONTINUING")
+    return 0
+
+
+def cmd_validate(args):
+    """Run the production invariant gate standalone (read-only)."""
+    return validation_gate(ctx={"mode": "standalone-invariant-validation"},
+                            mode="validate")
 
 
 def cmd_status():
@@ -197,39 +282,22 @@ def cmd_run(args):
     _run([sys.executable, BATCH_TOOL, "progress"])
     _run([sys.executable, BATCH_TOOL, "throughput"])
 
-    # Validations (non-blocking informational; site gates run in tests)
-    validations = {}
-    for name, cmd in [
-        ("matrix", [sys.executable, str(SCRIPTS_DIR / "validate_content_matrix.py")]),
-        ("site", [sys.executable, str(SCRIPTS_DIR / "validate_site.py")]),
-        ("cannibalization", [sys.executable, str(SCRIPTS_DIR / "check_cannibalization.py")]),
-        ("matrix_sync", [sys.executable, str(SCRIPTS_DIR / "check_matrix_sync.py")]),
-    ]:
-        v = _run(cmd)
-        validations[name] = "PASS" if v.returncode == 0 else "FAIL"
-
-    after = status_snapshot()
-    print(json.dumps({
-        "status": after["factory_status"],
+    # Production invariant validations are FAIL-CLOSED: any validator
+    # failure blocks the driver (BLOCKED verdict, non-zero exit, no
+    # CONTINUE/COMPLETE marker, failed validator named with output tails).
+    ctx = {
         "chunk": chunk_ids,
         "qa": {"PASS": len(qa.get("pass", [])), "REVIEW": len(qa.get("repair", []))},
         "published_ids": pub.get("ids", []),
-        "published_total": after["published"],
-        "remaining": after["unfinished"],
-        "active_batch": after["active_batch"],
-        "next_article": after["next_article"],
-        "validations": validations,
-        "checkpoint_clean": not fc.txn_pending(),
-    }, ensure_ascii=False, indent=2))
-    print("VANCHINH_FACTORY_COMPLETE" if after["factory_status"] == "COMPLETE"
-          else "VANCHINH_FACTORY_CONTINUING")
-    return 0
+    }
+    return validation_gate(ctx=ctx, mode="run")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("status", help="print matrix-derived factory status")
+    sub.add_parser("validate", help="run the production invariant gate standalone")
     p_run = sub.add_parser("run", help="process the next chunk end-to-end")
     p_run.add_argument("--chunk-size", type=int, default=10)
     p_run.add_argument("--writer-command", default=os.environ.get("VC_WRITER_CMD"),
@@ -237,6 +305,8 @@ def main():
     args = ap.parse_args()
     if args.cmd == "run":
         return cmd_run(args)
+    if args.cmd == "validate":
+        return cmd_validate(args)
     return cmd_status()
 
 

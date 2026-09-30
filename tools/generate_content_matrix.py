@@ -12,11 +12,16 @@ Deterministic: same input -> byte-identical CSV (sorted, stable ids).
 """
 import csv
 import json
+import os
 import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "content-matrix.csv"
+# Env-overridable so the sync checker (and tests/sandboxes) can regenerate
+# into a fixture location without ever touching the production file.
+# Default = production. Same config -> byte-identical output.
+OUT = pathlib.Path(os.environ.get("CONTENT_MATRIX",
+                                  str(ROOT / "data" / "content-matrix.csv")))
 
 CATEGORIES = {
     "KN": ("Kinh nghiệm", "kinhnghiem.html", 350),
