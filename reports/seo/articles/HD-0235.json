@@ -1,0 +1,18 @@
+{
+  "article_id": "HD-0235",
+  "word_count": 1774,
+  "seo_score": 97,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 25,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [],
+  "recommendations": [
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
