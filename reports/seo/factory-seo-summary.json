@@ -1,9 +1,9 @@
 {
-  "articles_scored": 1330,
+  "articles_scored": 1332,
   "average_score": 95.8,
   "min_score": 88,
   "max_score": 100,
-  "pass": 1330,
+  "pass": 1332,
   "review": 0,
   "fail": 0,
   "top_common_issues": [
@@ -13,7 +13,7 @@
     },
     {
       "issue": "title competes with a protected commercial intent",
-      "count": 14
+      "count": 16
     }
   ]
 }
