@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
   "batch": "B24",
-  "chunk_size": 1,
+  "chunk_size": 2,
   "current_chunk_ids": [],
   "written_ids": [
     "DL-0271",
@@ -314,7 +314,9 @@
     "HD-0178",
     "HD-0179",
     "HD-0180",
-    "HD-0181"
+    "HD-0181",
+    "HD-0182",
+    "HD-0183"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1501,11 +1503,13 @@
     "HD-0178",
     "HD-0179",
     "HD-0180",
-    "HD-0181"
+    "HD-0181",
+    "HD-0182",
+    "HD-0183"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T18:56:02Z",
-  "chunks_completed": 160,
-  "publish_operations": 160
+  "updated_at": "2026-09-30T19:02:07Z",
+  "chunks_completed": 161,
+  "publish_operations": 161
 }
