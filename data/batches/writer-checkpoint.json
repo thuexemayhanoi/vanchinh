@@ -443,7 +443,9 @@
     "KN-0007",
     "KN-0008",
     "KN-0009",
-    "KN-0010"
+    "KN-0010",
+    "KN-0011",
+    "KN-0012"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1759,11 +1761,13 @@
     "KN-0007",
     "KN-0008",
     "KN-0009",
-    "KN-0010"
+    "KN-0010",
+    "KN-0011",
+    "KN-0012"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T22:27:43Z",
-  "chunks_completed": 226,
-  "publish_operations": 226
+  "updated_at": "2026-09-30T22:29:13Z",
+  "chunks_completed": 227,
+  "publish_operations": 227
 }
