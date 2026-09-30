@@ -419,7 +419,9 @@
     "HD-0283",
     "HD-0284",
     "HD-0285",
-    "HD-0286"
+    "HD-0286",
+    "HD-0287",
+    "HD-0288"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1711,11 +1713,13 @@
     "HD-0283",
     "HD-0284",
     "HD-0285",
-    "HD-0286"
+    "HD-0286",
+    "HD-0287",
+    "HD-0288"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T21:44:02Z",
-  "chunks_completed": 214,
-  "publish_operations": 214
+  "updated_at": "2026-09-30T21:46:14Z",
+  "chunks_completed": 215,
+  "publish_operations": 215
 }
