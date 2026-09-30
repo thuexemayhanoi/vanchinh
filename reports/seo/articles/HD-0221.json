@@ -1,0 +1,19 @@
+{
+  "article_id": "HD-0221",
+  "word_count": 1477,
+  "seo_score": 95,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 25,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [],
+  "recommendations": [
+    "aim for 1600-2000 useful words",
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
