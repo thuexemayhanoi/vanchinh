@@ -162,12 +162,23 @@ def test_fixture_qa():
 def test_txn_and_lock():
     # lock path contract (README / docs/RECOVERY.md): data/batches/lock.json
     check("lock path contract", fc.LOCK == ROOT / "data" / "batches" / "lock.json")
+    check("txn path contract", fc.TXN == ROOT / "data" / "batches" / "txn" / "txn.json")
     # txn recovery must NEVER mutate the production matrix: run on a temp copy
+    # (lock/txn markers are isolated to the sandbox as well - production
+    # marker paths are never created by tests)
+    import contextlib
+    import io
     orig_matrix = fc.MATRIX
+    orig_lock = fc.LOCK
+    orig_txn = fc.TXN
     before_bytes = orig_matrix.read_bytes()
     with tempfile.TemporaryDirectory() as td:
-        tm = pathlib.Path(td) / "m.csv"
+        tdp = pathlib.Path(td)
+        tm = tdp / "m.csv"
+        fc.LOCK = tdp / "lock.json"
+        fc.TXN = tdp / "txn" / "txn.json"
         rows = [dict(r) for r in fc.load_matrix()]
+        at1_path = [r for r in rows if r["article_id"] == "AT-0001"][0]["output_path"]
         for r in rows:
             if r["article_id"] == "AT-0001":
                 r["status"] = "PASS"
@@ -176,6 +187,7 @@ def test_txn_and_lock():
             w.writeheader()
             w.writerows(rows)
         fc.MATRIX = tm
+        matrix_before = tm.read_bytes()
         try:
             # lock: second acquire must fail
             fc.acquire_lock(operator="test")
@@ -195,16 +207,228 @@ def test_txn_and_lock():
                 check("second txn refused", False)
             except RuntimeError:
                 check("second txn refused", True)
-            fc.recover_txn()
-            check("recover clears marker", not fc.txn_pending())
-            # after recovery, AT-0001 (file missing) must not stay PUBLISHED
+            # FAIL-CLOSED: PASS + missing file is a conflict -> marker KEPT
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = fc.recover_txn()
+            check("recover BLOCKED on missing file (rc 1)", rc == 1,
+                  f"rc={rc} {buf.getvalue()[-200:]}")
+            check("ambiguous recover keeps txn marker", fc.txn_pending())
+            check("ambiguous recover never rewrites matrix",
+                  tm.read_bytes() == matrix_before)
+            fc.TXN.unlink()
+            # known-safe rollback: real file present + PASS
+            fc.begin_txn({"articles": [{"article_id": "AT-0001", "output_path": at1_path,
+                                        "target_status": "PUBLISHED"}]})
+            check("pending txn detected (rollback case)", fc.txn_pending())
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = fc.recover_txn()
+            check("recover verifies known-safe rollback (rc 0)", rc == 0,
+                  f"rc={rc} {buf.getvalue()[-200:]}")
+            check("recover clears marker after verified rollback", not fc.txn_pending())
             rows = fc.load_matrix()
             at1 = [r for r in rows if r["article_id"] == "AT-0001"][0]
-            check("recovered unwritten article not published", at1["status"] in ("PLANNED", "WRITING", "PASS"))
+            check("rollback leaves status untouched (no guessing)",
+                  at1["status"] == "PASS", at1["status"])
+            check("rollback never rewrites matrix", tm.read_bytes() == matrix_before)
         finally:
-            fc.release_lock()
             fc.MATRIX = orig_matrix
+            fc.LOCK = orig_lock
+            fc.TXN = orig_txn
+            fc.release_lock()
     check("production matrix untouched by txn test", orig_matrix.read_bytes() == before_bytes)
+    check("production lock path untouched by txn test",
+          not (ROOT / "data" / "batches" / "lock.json").exists())
+    check("production txn path untouched by txn test",
+          not (ROOT / "data" / "batches" / "txn" / "txn.json").exists())
+
+
+def test_recover_fail_closed():
+    """FIX 2 regression: recovery must NEVER clear an ambiguous txn marker.
+    Fault injection (subprocess `run_article_batch recover`, sandbox matrix +
+    sandbox marker via CONTENT_MATRIX/TXN_FILE/LOCK_FILE): file missing,
+    matrix/file disagreement, partial publish, malformed/ambiguous plan,
+    unknown plan id, known-safe rollback, known-safe completion. Ambiguous
+    states keep the marker (rc 1); only proven-safe states clear it (rc 0);
+    the production matrix/markers are never mutated by the tests."""
+    orig_matrix = fc.MATRIX
+    before_bytes = orig_matrix.read_bytes()
+    prod_txn = ROOT / "data" / "batches" / "txn" / "txn.json"
+    prod_lock = ROOT / "data" / "batches" / "lock.json"
+    sitemap_p = ROOT / "sitemap.xml"
+    hub_p = ROOT / "kinhnghiem.html"
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        m = tdp / "m.csv"
+        txn = tdp / "txn" / "txn.json"
+        cp = tdp / "cp.json"
+        prog = tdp / "p.json"
+        thr = tdp / "t.json"
+        orig = list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))
+        pub = [r for r in orig if r["status"] == "PUBLISHED"][:3]
+        p1, p2, p3 = pub[0], pub[1], pub[2]
+
+        def write_matrix(status_map=None, path_map=None):
+            rows = [dict(r) for r in orig]
+            by = {r["article_id"]: r for r in rows}
+            for aid, st in (status_map or {}).items():
+                by[aid]["status"] = st
+            for aid, p in (path_map or {}).items():
+                by[aid]["output_path"] = p
+            with m.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                w.writeheader()
+                w.writerows(rows)
+            return m.read_bytes()
+
+        def marker(plan=None, raw=None):
+            txn.parent.mkdir(parents=True, exist_ok=True)
+            if raw is not None:
+                txn.write_text(raw, encoding="utf-8")
+                return
+            txn.write_text(json.dumps({"plan": plan, "state": "IN_PROGRESS",
+                                       "started": "2026-09-30T00:00:00Z"},
+                                      ensure_ascii=False, indent=2),
+                           encoding="utf-8")
+
+        def plan_item(row, output_path=None, target="PUBLISHED"):
+            return {"article_id": row["article_id"],
+                    "output_path": output_path or row["output_path"],
+                    "target_status": target}
+
+        def run_recover():
+            env = dict(os.environ, CONTENT_MATRIX=str(m), TXN_FILE=str(txn),
+                       LOCK_FILE=str(tdp / "lock.json"), PROGRESS_FILE=str(prog),
+                       WRITER_CHECKPOINT=str(cp), FACTORY_THROUGHPUT=str(thr))
+            return sh(sys.executable, "scripts/run_article_batch.py", "recover", env=env)
+
+        # --- no marker -> rc 0 --------------------------------------------
+        write_matrix()
+        if txn.exists():
+            txn.unlink()
+        r = run_recover()
+        check("recover: no marker -> rc 0", r.returncode == 0 and
+              "no pending transaction" in r.stdout, f"rc={r.returncode}")
+
+        # --- malformed marker JSON -> rc 1, marker KEPT -------------------
+        marker(raw="{not valid json")
+        r = run_recover()
+        check("recover: malformed marker -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and "cannot parse" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- ambiguous plan: no articles key -----------------------------
+        marker(plan={"updates": ["content-matrix"]})
+        r = run_recover()
+        check("recover: plan without articles -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and "malformed or empty" in r.stdout,
+              f"rc={r.returncode}")
+
+        # --- ambiguous plan: empty articles list --------------------------
+        marker(plan={"articles": []})
+        r = run_recover()
+        check("recover: empty articles plan -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists(), f"rc={r.returncode}")
+
+        # --- plan item missing article_id ---------------------------------
+        marker(plan={"articles": [{"output_path": "cam-nang/x.html",
+                                   "target_status": "PUBLISHED"}]})
+        r = run_recover()
+        check("recover: plan item missing article_id -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and
+              "missing article_id" in r.stdout, f"rc={r.returncode}")
+
+        # --- unknown plan id ------------------------------------------------
+        write_matrix()
+        marker(plan={"articles": [{"article_id": "ZZ-9999",
+                                   "output_path": "cam-nang/an-toan/zz.html",
+                                   "target_status": "PUBLISHED"}]})
+        r = run_recover()
+        check("recover: unknown plan id -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and
+              "not found in matrix" in r.stdout, f"rc={r.returncode}")
+
+        # --- file missing (pre-write PASS + missing file) -------------------
+        write_matrix({p1["article_id"]: "PASS"},
+                     {p1["article_id"]: "cam-nang/__missing__/x.html"})
+        marker(plan={"articles": [plan_item(p1, "cam-nang/__missing__/x.html")]})
+        r = run_recover()
+        check("recover: missing file -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and
+              "file missing" in r.stdout, f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- matrix/file disagreement (PUBLISHED + missing file) -----------
+        write_matrix({p1["article_id"]: "PUBLISHED"},
+                     {p1["article_id"]: "cam-nang/__missing__/x.html"})
+        marker(plan={"articles": [plan_item(p1, "cam-nang/__missing__/x.html")]})
+        r = run_recover()
+        check("recover: PUBLISHED without file -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and
+              "PUBLISHED but file missing" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- ambiguous matrix status (WRITING + file exists) ----------------
+        write_matrix({p1["article_id"]: "WRITING"})
+        marker(plan={"articles": [plan_item(p1)]})
+        r = run_recover()
+        check("recover: ambiguous WRITING status -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and
+              "ambiguous matrix status WRITING" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- partial publish (one PUBLISHED + one PASS) ----------------------
+        write_matrix({p1["article_id"]: "PUBLISHED", p2["article_id"]: "PASS"})
+        marker(plan={"articles": [plan_item(p1), plan_item(p2)]})
+        r = run_recover()
+        check("recover: partial publish -> rc 1 marker kept",
+              r.returncode == 1 and txn.exists() and "partial publish" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+
+        # --- known-safe rollback: both PASS, files exist ---------------------
+        rb_bytes = write_matrix({p1["article_id"]: "PASS", p2["article_id"]: "PASS"})
+        marker(plan={"articles": [plan_item(p1), plan_item(p2)]})
+        r = run_recover()
+        check("recover: known-safe rollback -> rc 0 marker cleared",
+              r.returncode == 0 and not txn.exists() and
+              "verified rollback" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-200:]}")
+        check("recover: rollback leaves matrix byte-identical",
+              m.read_bytes() == rb_bytes)
+        rows = list(csv.DictReader(open(m, encoding="utf-8", newline="")))
+        st = {x["article_id"]: x["status"] for x in rows
+              if x["article_id"] in (p1["article_id"], p2["article_id"])}
+        check("recover: rollback keeps statuses PASS (no guessing)",
+              set(st.values()) == {"PASS"}, str(st))
+
+        # --- known-safe completion: all PUBLISHED, files exist ---------------
+        # fixture matrix == byte-identical production copy, so the
+        # deterministic regeneration (sitemap/hubs/shells/progress) must be
+        # idempotent: no production working-copy file may drift.
+        shutil.copyfile(orig_matrix, m)
+        comp_bytes = m.read_bytes()
+        sitemap_before = sitemap_p.read_bytes()
+        hub_before = hub_p.read_bytes()
+        marker(plan={"articles": [plan_item(p1), plan_item(p2), plan_item(p3)]})
+        r = run_recover()
+        check("recover: known-safe completion -> rc 0 marker cleared",
+              r.returncode == 0 and not txn.exists() and
+              "verified completion" in r.stdout,
+              f"rc={r.returncode} {r.stdout[-300:]}")
+        check("recover: completion leaves matrix byte-identical",
+              m.read_bytes() == comp_bytes)
+        check("recover: completion regen idempotent (sitemap unchanged)",
+              sitemap_p.read_bytes() == sitemap_before)
+        check("recover: completion regen idempotent (hub unchanged)",
+              hub_p.read_bytes() == hub_before)
+
+        # --- production isolation --------------------------------------------
+        check("recover tests never create production txn marker",
+              not prod_txn.exists())
+        check("recover tests never create production lock",
+              not prod_lock.exists())
+    check("production matrix untouched by recover fault-injection tests",
+          orig_matrix.read_bytes() == before_bytes)
 
 
 def test_progress():
@@ -1133,6 +1357,7 @@ def main():
     test_scripts()
     test_fixture_qa()
     test_txn_and_lock()
+    test_recover_fail_closed()
     test_progress()
     test_hub_generation()
     test_taxonomy()

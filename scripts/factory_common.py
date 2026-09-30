@@ -6,6 +6,8 @@ import json
 import os
 import pathlib
 import re
+import subprocess
+import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -14,8 +16,10 @@ FACTS = json.loads((ROOT / "config" / "business-facts.json").read_text(encoding=
 RUBRIC = json.loads((ROOT / "config" / "article-rubric.json").read_text(encoding="utf-8"))
 OWNERSHIP = json.loads((ROOT / "config" / "seo-ownership.json").read_text(encoding="utf-8"))
 PROGRESS = pathlib.Path(os.environ.get("PROGRESS_FILE", str(ROOT / "reports" / "batches" / "factory-progress.json")))
-LOCK = ROOT / "data" / "batches" / "lock.json"
-TXN = ROOT / "data" / "batches" / "txn" / "txn.json"
+# LOCK/TXN are env-overridable so sandbox tests NEVER create markers at the
+# production paths. Defaults unchanged = production contract.
+LOCK = pathlib.Path(os.environ.get("LOCK_FILE", str(ROOT / "data" / "batches" / "lock.json")))
+TXN = pathlib.Path(os.environ.get("TXN_FILE", str(ROOT / "data" / "batches" / "txn" / "txn.json")))
 
 STATES = ["PLANNED", "WRITING", "QA", "REVIEW", "REPAIR", "PASS", "PUBLISHED", "FAIL", "BLOCKED"]
 TRANSITIONS = {
@@ -167,37 +171,117 @@ def finish_txn(result):
 
 
 def recover_txn():
-    """Recover/verify after interruption. Without git here, we verify matrix/file consistency
-    against the recorded plan; incomplete writes are reverted by re-deriving from plan."""
+    """FAIL-CLOSED transaction recovery (docs/RECOVERY.md contract).
+
+    Verifies the pending transaction against repository truth (matrix +
+    article files). Only a PROVEN deterministic state may complete or roll
+    back; consistency PASS is required BEFORE the marker is removed. Any
+    ambiguity or conflict KEEPS the marker and returns non-zero so no
+    further mutation can happen until an operator resolves it.
+
+    Safe verdicts (marker cleared, rc 0):
+      - verified rollback: every plan article is still in its pre-write
+        state (PASS) with its file present - the publish never mutated the
+        matrix, nothing was half-written, no derived output was touched.
+      - verified completion: every plan article is PUBLISHED and its file
+        exists; the remaining deterministic derived outputs (sitemap, hub
+        lists, article shells, progress) are regenerated and verified
+        FIRST - only then is the marker cleared.
+    Everything else (missing files, matrix/file disagreement, partial
+    publish, malformed/ambiguous marker or plan, unknown plan ids) is a
+    conflict: marker KEPT, rc 1, exact conflicts reported.
+    Recover NEVER guesses a status, NEVER rewrites the matrix, NEVER
+    resets repair counts, NEVER force-clears the marker.
+    """
     if not txn_pending():
         print("no pending transaction")
         return 0
-    data = json.loads(TXN.read_text(encoding="utf-8"))
-    plan = data.get("plan", {})
+    try:
+        data = json.loads(TXN.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"RECOVERY BLOCKED: cannot parse transaction marker {TXN}: {e}")
+        print("marker kept; no mutation performed; operator must resolve manually")
+        return 1
+    plan = data.get("plan") if isinstance(data, dict) else None
+    articles = plan.get("articles") if isinstance(plan, dict) else None
+    if not isinstance(articles, list) or not articles:
+        print(f"RECOVERY BLOCKED: malformed or empty transaction plan in {TXN}")
+        print("marker kept; no mutation performed; operator must resolve manually")
+        return 1
     rows = load_matrix()
     by_id = {r["article_id"]: r for r in rows}
-    problems = []
-    for item in plan.get("articles", []):
-        r = by_id.get(item["article_id"])
+    conflicts = []
+    completed = []
+    rolled_back = []
+    for item in articles:
+        if not isinstance(item, dict):
+            conflicts.append(f"malformed plan item: {item!r}")
+            continue
+        aid = item.get("article_id")
+        out = item.get("output_path")
+        if not aid or not out:
+            conflicts.append(f"plan item missing article_id/output_path: {item!r}")
+            continue
+        r = by_id.get(aid)
+        if r is None:
+            conflicts.append(f"{aid}: plan article not found in matrix")
+            continue
         target = item.get("target_status", "PUBLISHED")
-        f = ROOT / item["output_path"]
+        f = ROOT / out
         if target == "PUBLISHED":
-            if r["status"] not in ("PUBLISHED", "PASS"):
-                problems.append(f"{item['article_id']}: matrix status {r['status']} but file exists={f.exists()}")
-            if not f.exists():
-                # not written yet -> roll back to WRITING
-                if r["status"] not in ("PLANNED", "WRITING"):
-                    r["status"] = "WRITING"
+            if r["status"] == "PUBLISHED":
+                if f.exists():
+                    completed.append(aid)
+                else:
+                    conflicts.append(f"{aid}: matrix status PUBLISHED but file missing {out}")
+            elif r["status"] == "PASS":
+                if f.exists():
+                    rolled_back.append(aid)
+                else:
+                    conflicts.append(f"{aid}: pre-write status PASS but file missing {out}")
+            else:
+                conflicts.append(
+                    f"{aid}: ambiguous matrix status {r['status']} for pending PUBLISH "
+                    f"(file exists={f.exists()})")
         else:
-            if r["status"] != target:
-                r["status"] = target
-    save_matrix(rows)
-    if problems:
-        print("RECOVER problems:")
-        for p in problems:
-            print(" -", p)
+            # the transaction marker only exists for publish transactions;
+            # any other recorded target is an ambiguous/unsupported plan.
+            conflicts.append(
+                f"{aid}: unsupported/ambiguous plan target_status {target} "
+                f"(file exists={f.exists()})")
+    if conflicts:
+        print("RECOVERY BLOCKED: transaction state is ambiguous or inconsistent")
+        for c in conflicts:
+            print(" -", c)
+        print(f"marker KEPT at {TXN}; no mutation performed; no publish will proceed")
+        print("operator must resolve the conflicts above, then re-run recover")
+        return 1
+    if completed and rolled_back:
+        print("RECOVERY BLOCKED: partial publish detected "
+              f"(completed={sorted(completed)}, rolled_back={sorted(rolled_back)})")
+        print("marker KEPT; operator must resolve the partial publish manually")
+        return 1
+    if rolled_back:
+        TXN.unlink()
+        print(f"recovery: verified rollback of {len(rolled_back)} article(s): "
+              f"{', '.join(sorted(rolled_back))}")
+        print("transaction marker cleared after verified rollback (no publish happened)")
+        return 0
+    # verified completion: regenerate the remaining deterministic derived
+    # outputs FIRST; only a fully successful regeneration clears the marker.
+    for script in ("generate_sitemap.py", "generate_hub_lists.py", "build_article_shell.py"):
+        p = subprocess.run([sys.executable, str(pathlib.Path(__file__).parent / script)],
+                           capture_output=True, text=True)
+        if p.returncode != 0:
+            print(f"RECOVERY BLOCKED: deterministic regeneration failed ({script})")
+            print("marker kept; operator must resolve and re-run recover")
+            return 1
+    write_progress()
     TXN.unlink()
-    print("transaction marker cleared after consistency pass")
+    print(f"recovery: verified completion of {len(completed)} article(s): "
+          f"{', '.join(sorted(completed))}")
+    print("transaction marker cleared after consistency pass "
+          "(derived outputs regenerated and verified)")
     return 0
 
 
