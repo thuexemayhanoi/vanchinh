@@ -324,12 +324,18 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
                 r["status"] = "PASS"
                 r["published_date"] = ""
             fc.save_matrix(rows)
-            run(["generate_sitemap.py"])
-            run(["generate_hub_lists.py"])
+            rr_sitemap = run(["generate_sitemap.py"])
+            rr_hubs = run(["generate_hub_lists.py"])
             fc.write_progress()
-            fc.TXN.unlink()
-            print(json.dumps({"error": "publish rolled back: article shell rebuild failed",
-                              "batch": batch_id}))
+            if rr_sitemap.returncode == 0 and rr_hubs.returncode == 0:
+                fc.TXN.unlink()
+                print(json.dumps({"error": "publish rolled back: article shell rebuild failed",
+                                  "batch": batch_id}))
+                return 1
+            print(json.dumps({"error": "publish rollback incomplete: run recover",
+                              "batch": batch_id,
+                              "sitemap_rc": rr_sitemap.returncode,
+                              "hubs_rc": rr_hubs.returncode}))
             return 1
         fc.write_progress()
         fc.finish_txn({"published": len(to_publish), "batch": batch_id})

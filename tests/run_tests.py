@@ -431,6 +431,126 @@ def test_recover_fail_closed():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_publish_rollback_fail_closed():
+    """FIX 5 regression: the shell-rebuild rollback path must verify the
+    sitemap/hub regeneration return codes BEFORE clearing the txn marker.
+    Fault injection (in-process, sandboxed matrix/lock/txn/checkpoint/progress
+    via patched factory_common paths; run() stubbed): build_article_shell
+    fails -> rollback regen FAILS => marker KEPT + rc 1 + "rollback
+    incomplete"; build_article_shell fails -> rollback regen OK => marker
+    cleared + rc 1 + "rolled back"; happy path => rc 0 + marker cleared.
+    Production matrix/markers are never mutated by the tests."""
+    import contextlib
+    import io
+    import types
+    import run_article_batch as rab
+    orig_matrix = fc.MATRIX
+    before_bytes = orig_matrix.read_bytes()
+    prod_txn = ROOT / "data" / "batches" / "txn" / "txn.json"
+    prod_lock = ROOT / "data" / "batches" / "lock.json"
+    saved_paths = {k: getattr(fc, k) for k in
+                   ("MATRIX", "LOCK", "TXN", "CHECKPOINT", "PROGRESS", "THROUGHPUT")}
+    saved_run = rab.run
+    saved_score = rab.score_article_seo.score_article_seo
+    saved_summary = rab.score_article_seo.seo_summary
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            tdp = pathlib.Path(td)
+            m = tdp / "m.csv"
+            fc.MATRIX = m
+            fc.LOCK = tdp / "lock.json"
+            fc.TXN = tdp / "txn" / "txn.json"
+            fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+            fc.PROGRESS = tdp / "p.json"
+            fc.THROUGHPUT = tdp / "t.json"
+            orig = list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))
+            pub = [dict(r) for r in orig if r["status"] == "PUBLISHED"][:2]
+            check("publish rollback fixture: two published rows found", len(pub) == 2)
+            bid = pub[0]["batch_id"]
+            pub_ids = {r["article_id"] for r in pub}
+
+            def write_matrix():
+                rows = [dict(r) for r in orig]
+                by = {r["article_id"]: r for r in rows}
+                for r in pub:
+                    by[r["article_id"]]["status"] = "PASS"
+                    by[r["article_id"]]["published_date"] = ""
+                with m.open("w", newline="", encoding="utf-8") as f:
+                    w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                    w.writeheader()
+                    w.writerows(rows)
+
+            def statuses():
+                rows = list(csv.DictReader(open(m, encoding="utf-8", newline="")))
+                return {r["article_id"]: r["status"] for r in rows if r["article_id"] in pub_ids}
+
+            def fake_run_codes(codes):
+                it = iter(codes)
+
+                def fake_run(args, **kw):
+                    return types.SimpleNamespace(returncode=next(it, 0))
+                return fake_run
+
+            def call_publish():
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    rc = rab.cmd_publish(bid, all_pass=True)
+                return rc, buf.getvalue()
+
+            rab.score_article_seo.score_article_seo = \
+                lambda aid, write=False: {"seo_score": 95}
+            rab.score_article_seo.seo_summary = lambda: None
+
+            # --- shell rebuild fails + rollback regen FAILS => marker KEPT ---
+            write_matrix()
+            rab.run = fake_run_codes([0, 0, 1, 1, 0])
+            rc, out = call_publish()
+            check("publish rollback: shell fail + regen fail -> rc 1", rc == 1)
+            check("publish rollback: shell fail + regen fail -> marker KEPT",
+                  fc.TXN.exists())
+            check("publish rollback: shell fail + regen fail -> reports incomplete",
+                  "rollback incomplete" in out)
+            check("publish rollback: statuses restored to PASS",
+                  set(statuses().values()) == {"PASS"})
+            if fc.TXN.exists():
+                fc.TXN.unlink()
+
+            # --- shell rebuild fails + rollback regen OK => marker cleared ---
+            write_matrix()
+            rab.run = fake_run_codes([0, 0, 1, 0, 0])
+            rc, out = call_publish()
+            check("publish rollback: shell fail + regen ok -> rc 1", rc == 1)
+            check("publish rollback: shell fail + regen ok -> marker cleared",
+                  not fc.TXN.exists())
+            check("publish rollback: shell fail + regen ok -> reports rollback",
+                  "rolled back: article shell rebuild failed" in out)
+            check("publish rollback: regen ok -> statuses restored to PASS",
+                  set(statuses().values()) == {"PASS"})
+
+            # --- happy path => rc 0, marker cleared, sandbox PUBLISHED -----
+            write_matrix()
+            rab.run = fake_run_codes([0, 0, 0])
+            rc, out = call_publish()
+            check("publish happy path (stubbed): rc 0", rc == 0)
+            check("publish happy path (stubbed): marker cleared",
+                  not fc.TXN.exists())
+            check("publish happy path (stubbed): sandbox rows PUBLISHED",
+                  set(statuses().values()) == {"PUBLISHED"})
+
+        check("publish rollback tests never create production txn marker",
+              not prod_txn.exists())
+        check("publish rollback tests never create production lock",
+              not prod_lock.exists())
+    finally:
+        for k, v in saved_paths.items():
+            setattr(fc, k, v)
+        rab.run = saved_run
+        rab.score_article_seo.score_article_seo = saved_score
+        rab.score_article_seo.seo_summary = saved_summary
+    check("production matrix untouched by publish rollback tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def test_factory_liveness():
     """FIX 3 regression: READ-ONLY liveness watchdog verdicts from repository
     truth (matrix + checkpoint + progress + throughput + txn + lock).
@@ -796,7 +916,10 @@ def test_chunked_factory():
     orig_checkpoint = fc.CHECKPOINT
     before_bytes = orig_matrix.read_bytes()
     # SEO reports dir must not pollute production reports
-    orig_seo_dir = score_article_seo.ARTICLES_DIR if "score_article_seo" in sys.modules else None
+    # (sys.modules lookup: a later local `import score_article_seo` in this
+    # function makes the bare name local, so never reference it here)
+    orig_seo_dir = sys.modules["score_article_seo"].ARTICLES_DIR \
+        if "score_article_seo" in sys.modules else None
     with tempfile.TemporaryDirectory() as td:
         tdp = pathlib.Path(td)
         prod_rows = [dict(r) for r in fc.load_matrix()]
@@ -1544,6 +1667,7 @@ def main():
     test_fixture_qa()
     test_txn_and_lock()
     test_recover_fail_closed()
+    test_publish_rollback_fail_closed()
     test_factory_liveness()
     test_progress()
     test_hub_generation()
