@@ -101,7 +101,7 @@ jobs:
       - name: Matrix validation (pre-push gate)
         if: steps.select.outputs.proceed == 'true'
         run: python3 scripts/validate_content_matrix.py
-      - name: Matrix sync check (pre-push gate: matrix must equal generator output)
+      - name: Matrix sync check (pre-push gate - matrix must equal generator output)
         if: steps.select.outputs.proceed == 'true'
         run: python3 scripts/check_matrix_sync.py
       - name: Cannibalization check (pre-push gate)
