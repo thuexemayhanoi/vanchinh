@@ -103,7 +103,17 @@
     "DL-0367",
     "DL-0368",
     "DL-0369",
-    "DL-0370"
+    "DL-0370",
+    "DL-0371",
+    "DL-0372",
+    "DL-0373",
+    "DL-0374",
+    "DL-0375",
+    "DL-0376",
+    "DL-0377",
+    "DL-0378",
+    "DL-0379",
+    "DL-0380"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1079,11 +1089,21 @@
     "DL-0367",
     "DL-0368",
     "DL-0369",
-    "DL-0370"
+    "DL-0370",
+    "DL-0371",
+    "DL-0372",
+    "DL-0373",
+    "DL-0374",
+    "DL-0375",
+    "DL-0376",
+    "DL-0377",
+    "DL-0378",
+    "DL-0379",
+    "DL-0380"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-09-30T00:33:35Z",
-  "chunks_completed": 107,
-  "publish_operations": 107
+  "updated_at": "2026-09-30T00:43:17Z",
+  "chunks_completed": 108,
+  "publish_operations": 108
 }
