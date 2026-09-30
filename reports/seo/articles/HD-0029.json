@@ -1,0 +1,19 @@
+{
+  "article_id": "HD-0029",
+  "word_count": 1615,
+  "seo_score": 92,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3",
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
