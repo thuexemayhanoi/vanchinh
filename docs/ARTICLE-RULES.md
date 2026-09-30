@@ -51,15 +51,15 @@ Lỗi critical:
 - Structured data 10 (Article, BreadcrumbList, author, datePublished, mainEntityOfPage)
 - AI/GEO readiness 10 (đoạn trả lời ngắn, fact nhất quán, list rõ ràng, không nhồi từ khóa)
 
-Bands: PASS >= 90, REVIEW 80–89, FAIL < 80. Publish yêu cầu quality PASS VÀ SEO >= 90. Critical failure luôn override SEO score.
+Bands: PASS >= 80, REVIEW 70–79, FAIL < 70. Publish yêu cầu quality PASS VÀ SEO >= 80. Critical failure luôn override SEO score.
 
 Writer được tự tối ưu (title, meta, intro, H2/H3, đoạn trùng/filler, internal links, anchor, schema, kết luận, đoạn trả lời trực tiếp, wording) nhưng KHÔNG BAO GIỜ bịa fact/giá/giờ mở cửa/chính sách/pháp lý/nguồn. requires_sources=true mà không kiểm chứng được → REVIEW/BLOCKED.
 
 ## Điểm và gates
 
-- PASS: 90–100 và không critical.
-- REVIEW: 80–89 và không critical → REPAIR rồi chấm lại (tối đa 3 lần → BLOCKED).
-- FAIL: ≤ 79 hoặc bất kỳ critical nào.
+- PASS: 80–100 và không critical.
+- REVIEW: 70–79 và không critical → REPAIR rồi chấm lại (tối đa 3 lần → BLOCKED).
+- FAIL: ≤ 69 hoặc bất kỳ critical nào.
 
 Trọng số chi tiết trong `config/article-rubric.json`.
 

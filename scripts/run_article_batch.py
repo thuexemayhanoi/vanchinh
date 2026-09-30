@@ -11,7 +11,7 @@ Chunked, resume-safe flow (see docs/CONTENT-FACTORY.md):
   qa B01 --ids ...        -> scoped QA (quality + SEO score) of the current
                              chunk only; untouched rows stay untouched
   publish B01             -> grouped transactional publish of eligible PASS
-                             rows (quality PASS AND seo >= 90)
+                             rows (quality PASS AND seo >= 80)
 
 Simple Production Mode: batch = chunk = 50 articles (one push per batch).
 Selection is deterministic: batch_id + article_id order.
@@ -160,9 +160,9 @@ def _qa_row(r):
 
 
 def _qa_verdict(qres, sres):
-    """PASS requires quality PASS AND seo >= 90. Critical quality failure
+    """PASS requires quality PASS AND seo >= 80. Critical quality failure
     always overrides SEO. Quality FAIL and REVIEW handled by the state
-    machine exactly as before; SEO < 90 downgrades PASS to REVIEW."""
+    machine exactly as before; SEO < 80 downgrades PASS to REVIEW."""
     q = qres.get("quality_status", "FAIL")
     seo = int(sres.get("seo_score", 0) or 0)
     if q == "FAIL" or qres.get("critical"):
@@ -270,7 +270,7 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
         if missing:
             print(json.dumps({"error": "refusing publish: PASS rows without files", "missing": missing}))
             return 1
-        # SEO gate: quality PASS AND seo >= 90, both required
+        # SEO gate: quality PASS AND seo >= 80, both required
         seo_block = []
         for r in to_publish:
             sres = score_article_seo.score_article_seo(r["article_id"], write=True)

@@ -2,7 +2,7 @@
 
 Chạy từ repo root. Mọi mục critical phải PASS trước khi push.
 
-PHẠM VI (Simple Production Mode): checklist đầy đủ này dùng cho change engine/ workflow/ scripts và cho final verification. Push content-only (batch ≤ 50 bài) KHÔNG chạy checklist này mỗi batch — chỉ cần scoped QA (quality PASS + SEO >= 90, không critical), publish đúng PASS IDs, light matrix smoke trong factory-publish, CI xanh của đúng SHA. Full-site audit (mục 1–5 + 7 mở rộng toàn site) chạy MỘT LẦN khi đạt 2.000 bài, sau đó repair theo batch lỗi.
+PHẠM VI (Simple Production Mode): checklist đầy đủ này dùng cho change engine/ workflow/ scripts và cho final verification. Push content-only (batch ≤ 50 bài) KHÔNG chạy checklist này mỗi batch — chỉ cần scoped QA (quality PASS + SEO >= 80, không critical), publish đúng PASS IDs, light matrix smoke trong factory-publish, CI xanh của đúng SHA. Full-site audit (mục 1–5 + 7 mở rộng toàn site) chạy MỘT LẦN khi đạt 2.000 bài, sau đó repair theo batch lỗi.
 
 ## 1. Fact / domain / hours
 

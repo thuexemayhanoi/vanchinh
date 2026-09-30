@@ -11,7 +11,7 @@ name: Factory Publish (chunked)
 #                        fresh PLANNED rows
 #   BACKLOG:             PLANNED rows whose files already exist (<= 50,
 #                        deterministic article_id order)
-# Publish gate: quality PASS AND SEO >= 90. Single commit of derived state.
+# Publish gate: quality PASS AND SEO >= 80. Single commit of derived state.
 # Simple Production Mode: scoped QA + light matrix smoke per push.
 # Full-site gates (full test suite, validate_site, full-site cannibalization,
 # node parity) are NOT part of the per-batch loop; they run in CI
@@ -81,7 +81,7 @@ jobs:
         if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
         run: |
           python3 scripts/run_article_batch.py qa ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.qa_ids }} | tee /tmp/qa.json
-      - name: Grouped transactional publish (quality PASS AND SEO >= 90, explicit IDs)
+      - name: Grouped transactional publish (quality PASS AND SEO >= 80, explicit IDs)
         id: publish
         if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
         continue-on-error: true

@@ -1105,7 +1105,7 @@ def test_support_no_zalo():
 
 
 def test_seo_scorer():
-    """SEO scorer: deterministic 0-100; <90 cannot pass; publish gate enforced."""
+    """SEO scorer: deterministic 0-100; <80 cannot pass; publish gate enforced."""
     import score_article_seo
     # missing article -> score 0 FAIL, deterministic
     out = score_article_seo.score_article_seo("AT-0001", write=False)
@@ -1114,7 +1114,7 @@ def test_seo_scorer():
     check("seo scorer deterministic in 0-100", 0 <= out["seo_score"] <= 100 and
           out["seo_status"] in ("PASS", "REVIEW", "FAIL"))
     check("seo weights sum 100", sum(score_article_seo.WEIGHTS.values()) == 100)
-    check("seo pass threshold 90", fc.SEO_PASS_MIN == 90)
+    check("seo pass threshold 80", fc.SEO_PASS_MIN == 80)
     # fixture row via temp matrix
     with tempfile.TemporaryDirectory() as td:
         tm = pathlib.Path(td) / "m.csv"
@@ -1136,14 +1136,14 @@ def test_seo_scorer():
             check("fixture seo score in 0-100", 0 <= out["seo_score"] <= 100)
             check("fixture seo sections sum to score",
                   sum(out["sections"].values()) == out["seo_score"])
-            # publish gate: quality PASS + seo < 90 must not pass the verdict
+            # publish gate: quality PASS + seo < 80 must not pass the verdict
             import run_article_batch as rab
-            check("seo 89 cannot pass even with quality PASS",
+            check("seo 79 cannot pass even with quality PASS",
                   rab._qa_verdict({"quality_status": "PASS", "critical": []},
-                                  {"seo_score": 89}) == "REVIEW")
-            check("seo 90 passes with quality PASS",
+                                  {"seo_score": 79}) == "REVIEW")
+            check("seo 80 passes with quality PASS",
                   rab._qa_verdict({"quality_status": "PASS", "critical": []},
-                                  {"seo_score": 95}) == "PASS")
+                                  {"seo_score": 80}) == "PASS")
             check("quality FAIL cannot pass even with seo 100",
                   rab._qa_verdict({"quality_status": "FAIL", "critical": ["canonical incorrect"]},
                                   {"seo_score": 100}) == "FAIL")

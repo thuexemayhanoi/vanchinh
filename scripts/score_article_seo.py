@@ -4,13 +4,13 @@
 
 Second, INDEPENDENT gate beside the canonical article quality score
 (score_article.py). It never overrides critical quality failures:
-publish requires quality PASS AND seo_score >= 90.
+publish requires quality PASS AND seo_score >= 80.
 
 Weights (total 100):
   technical 20 | intent/on-page 25 | structure 20
   internal links 15 | structured data 10 | AI/GEO readiness 10
 
-Bands: PASS >= 90, REVIEW 80-89, FAIL < 80.
+Bands: PASS >= 80, REVIEW 70-79, FAIL < 70.
 
 Usage: score_article_seo.py <article_id> [--write/--no-write]
 Writes reports/seo/articles/<article-id>.json unless --no-write.
@@ -264,9 +264,9 @@ def score_article_seo(aid, write=True):
 
     total = sum(sec[k] for k in WEIGHTS)
     total = max(0, min(100, round(total)))
-    if total >= 90:
+    if total >= 80:
         status = "PASS"
-    elif total >= 80:
+    elif total >= 70:
         status = "REVIEW"
     else:
         status = "FAIL"

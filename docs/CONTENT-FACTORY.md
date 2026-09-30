@@ -33,7 +33,7 @@ QA → REVIEW → REPAIR → PASS   (tối đa 3 lần sửa)
 Terminal: FAIL, BLOCKED
 ```
 
-- PASS: mọi deterministic gate pass (score ≥ 90, không critical).
+- PASS: mọi deterministic gate pass (score ≥ 80, không critical).
 - PUBLISHED: sau khi file bài + hub + sitemap + reports + matrix commit nhất quán trong MỘT transaction.
 - Bài FAIL/BLOCKED không chặn bài PASS khác trong cùng batch.
 
@@ -58,7 +58,7 @@ Quy tắc:
 - PUBLISHED không bao giờ bị claim lại.
 - INVARIANT batch hiện tại: batch đang chạy phải hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch khác batch-chưa-terminal đầu tiên (terminal: PUBLISHED, BLOCKED, FAIL); `next_batch` trong progress report KHÔNG phải quyền claim.
 - Checkpoint `data/batches/writer-checkpoint.json`: schema_version, batch, chunk_size, current_chunk_ids, written_ids, pending_qa_ids, pending_repair_ids, pass_ids, pending_publish_ids, published_ids, last_completed_step, updated_at. MATRIX > CHECKPOINT khi xung đột: mọi pending list được DERIVE từ trạng thái matrix khi đọc (REPAIR→PASS rời pending_repair_ids; PUBLISHED rời mọi pending list) — không tồn tại stale pending ID.
-- Publish gate: quality PASS VÀ SEO >= 90 (`score_article_seo.py`), không critical. SEO 100 không cứu được quality FAIL hay critical.
+- Publish gate: quality PASS VÀ SEO >= 80 (`score_article_seo.py`), không critical. SEO 100 không cứu được quality FAIL hay critical.
 - SEO reports: `reports/seo/articles/<article-id>.json` (score, sections, issues, recommendations) + `reports/seo/factory-seo-summary.json`.
 - Throughput: `reports/batches/factory-throughput.json` (số liệu thật từ matrix + checkpoint).
 
@@ -153,7 +153,7 @@ Hợp đồng bắt buộc (AGENTS.md tham chiếu mục này). "CI GREEN" KHÔN
 ### Phạm vi bắt buộc (gates theo scope — Simple Production Mode)
 
 - Change engine/ workflow/ recovery/ scripts → TIER 1 + 2 + 3 + 4.
-- Change content-only (bài viết) → KHÔNG chạy 4-tier cho mỗi batch: scoped QA từng bài (quality PASS + SEO >= 90, không critical) + publish gate + light matrix smoke (validate_content_matrix + check_matrix_sync trong factory-publish) là đủ. Full-site audit toàn site chỉ chạy MỘT LẦN khi đủ 2.000 bài, sau đó repair theo batch lỗi.
+- Change content-only (bài viết) → KHÔNG chạy 4-tier cho mỗi batch: scoped QA từng bài (quality PASS + SEO >= 80, không critical) + publish gate + light matrix smoke (validate_content_matrix + check_matrix_sync trong factory-publish) là đủ. Full-site audit toàn site chỉ chạy MỘT LẦN khi đủ 2.000 bài, sau đó repair theo batch lỗi.
 - KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.
 
 ## Không trùng lặp liên site

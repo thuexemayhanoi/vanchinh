@@ -141,7 +141,7 @@ Xem `docs/ARTICLE-RULES.md` + `config/article-rubric.json`. Tóm tắt: 1.600–
 
 ## 14. QA/scoring standard
 
-Rubric 100 điểm: PASS 90–100 & không critical; REVIEW 80–89; FAIL ≤79 hoặc bất kỳ critical failure. Critical: canonical sai, path sai, bịa giá/chính sách, sai lệch nguồn pháp lý, cannibalization, corruption ký tự (TQ/Cyrillic), broken link, publish trạng thái không hợp lệ. Chi tiết weights trong `config/article-rubric.json`.
+Rubric 100 điểm: PASS 80–100 & không critical; REVIEW 70–79; FAIL ≤69 hoặc bất kỳ critical failure. Critical: canonical sai, path sai, bịa giá/chính sách, sai lệch nguồn pháp lý, cannibalization, corruption ký tự (TQ/Cyrillic), broken link, publish trạng thái không hợp lệ. Chi tiết weights trong `config/article-rubric.json`.
 
 ## 15. Source/legal verification rules
 
@@ -208,10 +208,10 @@ Sau đó resume theo trạng thái repo (lock, txn, batch đang active).
 - Batch = chunk = 50 bài: writer viết và push tối đa 50 bài mới một lượt (một push = một batch). 40 batch × 50 bài = 2.000 dòng matrix. Production loop: WRITE 50 → LIGHT QA → PUBLISH → NEXT 50 → REPEAT. Không over-engineer workflow; full audit toàn site chỉ chạy một lần khi đủ 2.000 bài.
 - Lệnh: `claim B01 --limit 50` (claim đúng 50 row PLANNED→WRITING, thứ tự deterministic batch+article_id), `qa B01 [--ids ...|--limit N]` (scoped QA), `publish B01` (grouped publish PASS).
 - Invariant batch hiện tại: batch đang chạy PHẢI hoàn tất trước khi claim batch khác. `claim` từ chối mọi batch ≠ batch chưa hoàn thành đầu tiên (theo thứ tự matrix). Trạng thái terminal cho phép chuyển batch: PUBLISHED, BLOCKED, FAIL. Hệ quả: không bao giờ nhảy sang B02 khi B01 còn row chưa terminal; `next_batch` trong progress report CHỈ là batch kế tiếp chưa có bài published, KHÔNG phải quyền claim.
-- Publish yêu cầu: quality PASS VÀ SEO score >= 90 VÀ không critical.
+- Publish yêu cầu: quality PASS VÀ SEO score >= 80 VÀ không critical.
 - Checkpoint: `data/batches/writer-checkpoint.json` (operational state; MATRIX > CHECKPOINT khi conflict).
 - Throughput: `reports/batches/factory-throughput.json` (số thật, không ước lượng).
-- SEO score: `scripts/score_article_seo.py` (0–100, deterministic; PASS>=90, REVIEW 80–89, FAIL<80). Reports: `reports/seo/articles/<id>.json` + `reports/seo/factory-seo-summary.json`.
+- SEO score: `scripts/score_article_seo.py` (0–100, deterministic; PASS>=80, REVIEW 70–79, FAIL<70). Reports: `reports/seo/articles/<id>.json` + `reports/seo/factory-seo-summary.json`.
 - Bulk scoring: `scripts/score_chunk.py --batch B01 --limit 50`.
 - Vòng đời: WRITE → quality score → SEO score → REPAIR (max 3) → re-score → publish nếu cả hai gate PASS.
 

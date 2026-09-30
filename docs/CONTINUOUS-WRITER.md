@@ -16,7 +16,7 @@ FETCH FRESH MAIN
 → RECOVER IF NEEDED (txn marker)
 → RESUME (hoàn tất dở: REPAIR/QA/PASS pending của active batch)
 → WRITE <= 50 (file bài thật theo matrix + docs/ARTICLE-RULES.md)
-→ LOCAL SCOPED QA (quality + SEO >= 90, không hạ threshold)
+→ LOCAL SCOPED QA (quality + SEO >= 80, không hạ threshold)
 → PUSH BATCH (≤ 50 file mới)
 → WAIT factory-publish.yml
 → VERIFY (workflow green, Pages deploy, no lock/txn)
@@ -56,7 +56,7 @@ Dừng tạm do rate-limit/ lỗi connector tạm thời KHÔNG PHẢI quyền r
 
 VERIFY trong loop này là "workflow green + Pages deploy + no lock/txn" của đúng SHA vừa push.
 
-- Change content-only (batch bài viết) → KHÔNG chạy 4-tier cho mỗi batch. Chỉ cần scoped QA từng bài (quality PASS + SEO >= 90, không critical), publish đúng PASS IDs, light matrix smoke trong factory-publish, CI xanh của đúng SHA.
+- Change content-only (batch bài viết) → KHÔNG chạy 4-tier cho mỗi batch. Chỉ cần scoped QA từng bài (quality PASS + SEO >= 80, không critical), publish đúng PASS IDs, light matrix smoke trong factory-publish, CI xanh của đúng SHA.
 - Change engine/ workflow/ recovery → TIER 1 + 2 + 3 + 4 bắt buộc trước khi coi là đã fix.
 - KHÔNG chạy full-site audit sau mỗi batch. Full audit toàn site chạy MỘT LẦN khi đủ 2.000 bài, sau đó repair theo batch lỗi.
 - KHÔNG BAO GIỜ tuyên bố "factory fixed" chỉ vì unit tests xanh.

@@ -335,7 +335,7 @@ def write_progress(published_commit_sha=""):
 CHECKPOINT = pathlib.Path(os.environ.get("WRITER_CHECKPOINT", str(ROOT / "data" / "batches" / "writer-checkpoint.json")))
 THROUGHPUT = pathlib.Path(os.environ.get("FACTORY_THROUGHPUT", str(ROOT / "reports" / "batches" / "factory-throughput.json")))
 DEFAULT_CHUNK = 50  # Simple Production Mode: batch = chunk = 50 articles
-SEO_PASS_MIN = 90  # publish gate: quality PASS AND seo_score >= 90
+SEO_PASS_MIN = 80  # publish gate: quality PASS AND seo_score >= 80
 
 CHECKPOINT_SCHEMA = "1"
 

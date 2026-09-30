@@ -12,7 +12,7 @@ because one batch or chunk finished:
         claim next chunk (50 rows, or fewer for a final partial chunk)
         WRITER stage  -> external writer produces the article files
         qa
-        publish (transactional, PASS + seo >= 90)
+        publish (transactional, PASS + seo >= 80)
         regenerate progress / throughput
         production invariant validations (FAIL-CLOSED: matrix, site,
         cannibalization, matrix sync)

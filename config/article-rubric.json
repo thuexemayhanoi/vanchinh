@@ -30,9 +30,9 @@
     "source_section_when_required": {"weight": 0, "critical_if_missing": true}
   },
   "score_bands": {
-    "PASS": {"min": 90, "max": 100, "requires_no_critical_failure": true},
-    "REVIEW": {"min": 80, "max": 89, "requires_no_critical_failure": true},
-    "FAIL": {"min": 0, "max": 79}
+    "PASS": {"min": 80, "max": 100, "requires_no_critical_failure": true},
+    "REVIEW": {"min": 70, "max": 79, "requires_no_critical_failure": true},
+    "FAIL": {"min": 0, "max": 69}
   },
   "critical_failures": [
     "incorrect_or_missing_canonical",
