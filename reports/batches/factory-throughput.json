@@ -1,13 +1,13 @@
 {
   "current_batch": "B30",
   "chunk_size": 2,
-  "chunks_completed": 300,
-  "written": 1456,
-  "quality_pass": 1456,
-  "seo_pass": 1456,
-  "published": 1456,
+  "chunks_completed": 301,
+  "written": 1458,
+  "quality_pass": 1458,
+  "seo_pass": 1458,
+  "published": 1458,
   "repair_count": 21,
-  "publish_operations": 300,
-  "elapsed_minutes": 5706.8,
+  "publish_operations": 301,
+  "elapsed_minutes": 5707.3,
   "effective_articles_per_hour": 15.3
 }
