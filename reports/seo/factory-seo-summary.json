@@ -14,10 +14,6 @@
     {
       "issue": "title competes with a protected commercial intent",
       "count": 30
-    },
-    {
-      "issue": "canonical incorrect or missing",
-      "count": 10
     }
   ]
 }

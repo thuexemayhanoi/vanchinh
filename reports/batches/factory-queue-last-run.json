@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
   "batch": "B36",
-  "mode": "new",
+  "mode": "repair",
   "queue": [
     "XM-0141",
     "XM-0142",
@@ -15,8 +15,8 @@
     "XM-0150"
   ],
   "pair_size": 2,
-  "started": "2026-10-01T22:33:42Z",
-  "finished": "2026-10-01T22:33:44Z",
+  "started": "2026-10-01T22:34:19Z",
+  "finished": "2026-10-01T22:34:30Z",
   "pairs": [
     {
       "pair_index": 1,
@@ -24,20 +24,20 @@
         "XM-0141",
         "XM-0142"
       ],
-      "claimed": [
+      "claimed": [],
+      "pass": [
         "XM-0141",
         "XM-0142"
       ],
-      "pass": [],
-      "published": [],
+      "published": [
+        "XM-0141",
+        "XM-0142"
+      ],
       "review": [],
-      "repair": [
-        "XM-0141",
-        "XM-0142"
-      ],
+      "repair": [],
       "blocked": [],
       "publish_rc": 0,
-      "status": "recoverable"
+      "status": "published"
     },
     {
       "pair_index": 2,
@@ -45,20 +45,20 @@
         "XM-0143",
         "XM-0144"
       ],
-      "claimed": [
+      "claimed": [],
+      "pass": [
         "XM-0143",
         "XM-0144"
       ],
-      "pass": [],
-      "published": [],
+      "published": [
+        "XM-0143",
+        "XM-0144"
+      ],
       "review": [],
-      "repair": [
-        "XM-0143",
-        "XM-0144"
-      ],
+      "repair": [],
       "blocked": [],
       "publish_rc": 0,
-      "status": "recoverable"
+      "status": "published"
     },
     {
       "pair_index": 3,
@@ -66,20 +66,20 @@
         "XM-0145",
         "XM-0146"
       ],
-      "claimed": [
+      "claimed": [],
+      "pass": [
         "XM-0145",
         "XM-0146"
       ],
-      "pass": [],
-      "published": [],
+      "published": [
+        "XM-0145",
+        "XM-0146"
+      ],
       "review": [],
-      "repair": [
-        "XM-0145",
-        "XM-0146"
-      ],
+      "repair": [],
       "blocked": [],
       "publish_rc": 0,
-      "status": "recoverable"
+      "status": "published"
     },
     {
       "pair_index": 4,
@@ -87,20 +87,20 @@
         "XM-0147",
         "XM-0148"
       ],
-      "claimed": [
+      "claimed": [],
+      "pass": [
         "XM-0147",
         "XM-0148"
       ],
-      "pass": [],
-      "published": [],
+      "published": [
+        "XM-0147",
+        "XM-0148"
+      ],
       "review": [],
-      "repair": [
-        "XM-0147",
-        "XM-0148"
-      ],
+      "repair": [],
       "blocked": [],
       "publish_rc": 0,
-      "status": "recoverable"
+      "status": "published"
     },
     {
       "pair_index": 5,
@@ -108,24 +108,26 @@
         "XM-0149",
         "XM-0150"
       ],
-      "claimed": [
+      "claimed": [],
+      "pass": [
         "XM-0149",
         "XM-0150"
       ],
-      "pass": [],
-      "published": [],
+      "published": [
+        "XM-0149",
+        "XM-0150"
+      ],
       "review": [],
-      "repair": [
-        "XM-0149",
-        "XM-0150"
-      ],
+      "repair": [],
       "blocked": [],
       "publish_rc": 0,
-      "status": "recoverable"
+      "status": "published"
     }
   ],
-  "published_total": 0,
-  "recoverable_ids": [
+  "published_total": 10,
+  "recoverable_ids": [],
+  "fatal": null,
+  "published_ids": [
     "XM-0141",
     "XM-0142",
     "XM-0143",
@@ -136,7 +138,5 @@
     "XM-0148",
     "XM-0149",
     "XM-0150"
-  ],
-  "fatal": null,
-  "published_ids": []
+  ]
 }

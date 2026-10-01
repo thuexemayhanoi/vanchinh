@@ -1,20 +1,16 @@
 {
   "article_id": "XM-0141",
   "word_count": 1778,
-  "seo_score": 90,
+  "seo_score": 94,
   "seo_status": "PASS",
   "sections": {
-    "technical": 16,
+    "technical": 20,
     "intent": 19,
     "structure": 20,
     "internal_links": 15,
     "schema": 10,
     "ai_geo": 10
   },
-  "issues": [
-    "canonical incorrect or missing"
-  ],
-  "recommendations": [
-    "set self-canonical to base + output_path"
-  ]
+  "issues": [],
+  "recommendations": []
 }
