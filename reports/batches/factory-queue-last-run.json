@@ -3,30 +3,30 @@
   "batch": "B35",
   "mode": "new",
   "queue": [
-    "XM-0079",
-    "XM-0080"
+    "XM-0081",
+    "XM-0082"
   ],
   "pair_size": 2,
-  "started": "2026-10-01T21:16:10Z",
-  "finished": "2026-10-01T21:16:12Z",
+  "started": "2026-10-01T21:17:31Z",
+  "finished": "2026-10-01T21:17:33Z",
   "pairs": [
     {
       "pair_index": 1,
       "ids": [
-        "XM-0079",
-        "XM-0080"
+        "XM-0081",
+        "XM-0082"
       ],
       "claimed": [
-        "XM-0079",
-        "XM-0080"
+        "XM-0081",
+        "XM-0082"
       ],
       "pass": [
-        "XM-0079",
-        "XM-0080"
+        "XM-0081",
+        "XM-0082"
       ],
       "published": [
-        "XM-0079",
-        "XM-0080"
+        "XM-0081",
+        "XM-0082"
       ],
       "review": [],
       "repair": [],
@@ -39,7 +39,7 @@
   "recoverable_ids": [],
   "fatal": null,
   "published_ids": [
-    "XM-0079",
-    "XM-0080"
+    "XM-0081",
+    "XM-0082"
   ]
 }
