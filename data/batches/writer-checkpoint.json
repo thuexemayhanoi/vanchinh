@@ -592,6 +592,8 @@
     "KN-0156",
     "KN-0157",
     "KN-0158",
+    "KN-0159",
+    "KN-0160",
     "KN-0161",
     "KN-0162",
     "KN-0163",
@@ -2060,6 +2062,8 @@
     "KN-0156",
     "KN-0157",
     "KN-0158",
+    "KN-0159",
+    "KN-0160",
     "KN-0161",
     "KN-0162",
     "KN-0163",
@@ -2067,7 +2071,7 @@
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T01:24:16Z",
-  "chunks_completed": 303,
-  "publish_operations": 303
+  "updated_at": "2026-10-01T01:24:58Z",
+  "chunks_completed": 304,
+  "publish_operations": 304
 }
