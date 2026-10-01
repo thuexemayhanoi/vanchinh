@@ -1,0 +1,18 @@
+{
+  "article_id": "XM-0057",
+  "word_count": 1607,
+  "seo_score": 96,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 23,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [],
+  "recommendations": [
+    "break long paragraphs into readable ones"
+  ]
+}
