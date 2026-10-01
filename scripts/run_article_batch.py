@@ -113,8 +113,11 @@ def _claimable_batch(rows):
     return None
 
 
-def cmd_claim(batch_id, limit=None, ids=None):
-    fc.acquire_lock(operator=f"batch-{batch_id}")
+def cmd_claim(batch_id, limit=None, ids=None, lock_held=False):
+    # lock_held=True: the caller (e.g. scripts/factory_queue.py) already holds
+    # the run-lock for the whole queue run; do not acquire/release again.
+    if not lock_held:
+        fc.acquire_lock(operator=f"batch-{batch_id}")
     try:
         rows = fc.load_matrix()
         # Invariant: the current unfinished batch must finish first.
@@ -144,7 +147,8 @@ def cmd_claim(batch_id, limit=None, ids=None):
         print(json.dumps({"claimed": changed, "batch": batch_id, "chunk_ids": chunk_ids,
                           "chunk_size": len(chunk_ids)}))
     finally:
-        fc.release_lock()
+        if not lock_held:
+            fc.release_lock()
     return 0
 
 
@@ -172,8 +176,9 @@ def _qa_verdict(qres, sres):
     return "REVIEW"  # quality REVIEW
 
 
-def cmd_qa(batch_id, ids=None, limit=None):
-    fc.acquire_lock(operator=f"batch-{batch_id}")
+def cmd_qa(batch_id, ids=None, limit=None, lock_held=False):
+    if not lock_held:
+        fc.acquire_lock(operator=f"batch-{batch_id}")
     try:
         rows = fc.load_matrix()
         br = batch_rows(rows, batch_id)
@@ -248,12 +253,14 @@ def cmd_qa(batch_id, ids=None, limit=None):
         print(json.dumps({"batch": batch_id, "scoped": sorted(scope), "results": results,
                           "pass": sorted(pass_ids), "repair": sorted(repair_ids)}))
     finally:
-        fc.release_lock()
+        if not lock_held:
+            fc.release_lock()
     return 0
 
 
-def cmd_publish(batch_id, ids=None, all_pass=False):
-    fc.acquire_lock(operator=f"batch-{batch_id}")
+def cmd_publish(batch_id, ids=None, all_pass=False, lock_held=False):
+    if not lock_held:
+        fc.acquire_lock(operator=f"batch-{batch_id}")
     try:
         rows = fc.load_matrix()
         to_publish = [r for r in rows if r["batch_id"] == batch_id and r["status"] == "PASS"]
@@ -360,7 +367,8 @@ def cmd_publish(batch_id, ids=None, all_pass=False):
         print(json.dumps({"published": len(to_publish), "batch": batch_id,
                           "ids": [r["article_id"] for r in to_publish]}))
     finally:
-        fc.release_lock()
+        if not lock_held:
+            fc.release_lock()
     return 0
 
 

@@ -1474,14 +1474,14 @@ def test_push_selection_and_repair():
     """Push-scope selection + repair/resume regressions (workflow contract):
     (1) push adds 5 files -> exactly those 5 claimed, other PLANNED rows stay
         PLANNED (never over-claim, the B18 root cause);
-    (2) push adds 10 files -> exactly 10 claimed;
+    (2) push adds 10 files -> exactly 10 queued as 5 deterministic pairs;
     (3) repair-only push (modified article files) processes exactly the
         repaired IDs and NEVER claims a fresh PLANNED row;
     (4) REPAIR -> PASS clears pending_repair_ids and enters pass/publish lists;
     (5) PASS -> PUBLISHED cleans checkpoint pending lists + txn marker;
     (6) a PLANNED row whose file is missing is never claimed even if listed;
-    (7) 50 added files -> exactly 50 claimed (Simple Production Mode batch);
-    (8) added files exceeding MAX_CLAIM -> refuse (never silently claim)."""
+    (7) 50 added files -> REFUSE (write-ahead queue caps one push at 10);
+    (8) added files exceeding MAX_PER_PUSH -> refuse (never silently claim)."""
     orig_matrix = fc.MATRIX
     orig_checkpoint = fc.CHECKPOINT
     before_bytes = orig_matrix.read_bytes()
@@ -1524,7 +1524,7 @@ def test_push_selection_and_repair():
         empty = tdp / "empty.txt"
         empty.write_text("")
         try:
-            # --- (2) 10 added files -> exactly 10 claimed -------------------
+            # --- (2) 10 added files -> exactly 10 queued as 5 pairs ----------
             write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
             added10 = tdp / "added10.txt"
             added10.write_text("\n".join(path_of(a) for a in test_ids[:10]) + "\n")
@@ -1534,25 +1534,30 @@ def test_push_selection_and_repair():
             check("selection: 10 added files -> exactly 10 claim ids",
                   sel["claim_ids"] == sorted(test_ids[:10]) and sel["mode"] == "new",
                   r.stdout[-300:])
-            # --- (7) 50 added files -> exactly 50 claimed (batch = chunk = 50)
+            check("selection: queue is the 10 ids in matrix order",
+                  sel["queue"] == test_ids[:10], str(sel["queue"]))
+            check("selection: 10 ids split into 5 deterministic pairs of 2",
+                  sel["pairs"] == [test_ids[i:i + 2] for i in range(0, 10, 2)] and
+                  sel["pair_count"] == 5, str(sel["pairs"]))
+            # --- (7) 50 added files -> REFUSE (queue contract caps a push at 10)
             write_rows({aid: ("PLANNED", "0") for aid in test_ids[:50]})
             added50 = tdp / "added50.txt"
             added50.write_text("\n".join(path_of(a) for a in test_ids[:50]) + "\n")
             r = sh(sys.executable, "scripts/factory_push_selection.py",
                    "--added", str(added50), "--modified", str(empty), env=env)
             sel = json.loads(r.stdout)
-            check("selection: 50 added files -> exactly 50 claim ids",
-                  sel["claim_ids"] == sorted(test_ids[:50]) and sel["mode"] == "new",
+            check("selection: 50 added files -> refuse (>10 per push)",
+                  bool(sel["refuse"]) and not sel["proceed"] and r.returncode == 3,
                   r.stdout[-300:])
-            # --- (8) added files exceeding MAX_CLAIM -> refuse (never silently claim)
-            # A batch holds exactly 50 rows, so the >MAX_CLAIM guard is
-            # exercised in-process with a reduced cap (same refuse logic).
+            # --- (8) added files exceeding MAX_PER_PUSH -> refuse ------------
+            # The cap guard is exercised in-process with a reduced cap
+            # (same refuse logic, size-independent).
             write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
-            fps.MAX_CLAIM = 5  # simulate a smaller cap; guard is size-independent
+            fps.MAX_PER_PUSH = 5  # simulate a smaller cap; guard is size-independent
             sel = fps.select([path_of(a) for a in test_ids[:10]], [])
-            check("selection: added files exceeding MAX_CLAIM -> refuse",
+            check("selection: added files exceeding MAX_PER_PUSH -> refuse",
                   bool(sel["refuse"]) and not sel["proceed"], str(sel)[:200])
-            fps.MAX_CLAIM = 50
+            fps.MAX_PER_PUSH = 10
             # --- (1) 5 added files -> exactly 5 claimed ----------------------
             write_rows({aid: ("PLANNED", "0") for aid in test_ids[:10]})
             added5 = tdp / "added5.txt"
@@ -1668,9 +1673,295 @@ def test_push_selection_and_repair():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_writer_claim():
+    """Multi-writer lease registry (TURBO MULTI-WRITER contract):
+    (1) W1/W2/W3 claim disjoint PLANNED rows of the active batch (10 each);
+    (2) live lease cap: a writer with 10 live leases cannot claim more;
+    (3) registry refuses a 4th writer;
+    (4) explicit --ids of another writer's lease -> refuse;
+    (5) release frees ids for other writers;
+    (6) expired leases (TTL) are reclaimed automatically;
+    (7) merge resolves cross-writer conflicts: earlier claim wins;
+    (8) show reports free PLANNED rows excluding live leases."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    import writer_claim as wc  # noqa: E402
+    orig_registry = wc.REGISTRY
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        wc.REGISTRY = tdp / "writer-claims.json"
+        orig_rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
+        test_ids = [f"AT-{i:04d}" for i in range(1, 52)]  # AT-0001..AT-0051
+        rows = [dict(r) for r in orig_rows]
+        for x in rows:
+            if x["article_id"] in test_ids:
+                x["status"] = "PLANNED"
+                x["repair_attempts"] = "0"
+            else:
+                x["status"] = "PUBLISHED"
+        with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        try:
+            # --- (1) three writers claim disjoint ids -----------------------
+            r1 = capture_stdout(lambda: wc.cmd_claim("W1", count=10))
+            check("writer_claim: W1 claim rc 0", r1 == 0, str(r1))
+            reg = wc.load_registry()
+            check("writer_claim: W1 leased 10 ids in matrix order",
+                  reg["leases"]["W1"]["ids"] == test_ids[:10],
+                  str(reg["leases"].get("W1")))
+            r2 = capture_stdout(lambda: wc.cmd_claim("W2", count=10))
+            reg = wc.load_registry()
+            check("writer_claim: W2 leased the next 10 (disjoint)",
+                  r2 == 0 and reg["leases"]["W2"]["ids"] == test_ids[10:20],
+                  str(reg["leases"].get("W2")))
+            r3 = capture_stdout(lambda: wc.cmd_claim("W3", count=8))
+            reg = wc.load_registry()
+            check("writer_claim: W3 leased the next 8 (disjoint)",
+                  r3 == 0 and reg["leases"]["W3"]["ids"] == test_ids[20:28],
+                  str(reg["leases"].get("W3")))
+            all_ids = (reg["leases"]["W1"]["ids"] + reg["leases"]["W2"]["ids"] +
+                       reg["leases"]["W3"]["ids"])
+            check("writer_claim: three writers never collide on ids",
+                  len(all_ids) == len(set(all_ids)) == 28, str(sorted(all_ids)))
+            # --- (2) live lease cap ----------------------------------------
+            rc = capture_stdout(lambda: wc.cmd_claim("W1", count=1))
+            check("writer_claim: writer at 10 live leases cannot claim more",
+                  rc == 1, str(rc))
+            reg2 = wc.load_registry()
+            check("writer_claim: cap refusal mutates nothing",
+                  reg2["leases"]["W1"]["ids"] == test_ids[:10], str(reg2["leases"]["W1"]))
+            # --- (3) a 4th writer is refused --------------------------------
+            rc = capture_stdout(lambda: wc.cmd_claim("W4", count=2))
+            reg3 = wc.load_registry()
+            check("writer_claim: registry refuses a 4th writer",
+                  rc == 1 and "W4" not in reg3["leases"], str(sorted(reg3["leases"])))
+            # --- (4) explicit ids of another writer's lease -> refuse -------
+            rc = capture_stdout(lambda: wc.cmd_claim("W1", ids=[test_ids[10]]))
+            check("writer_claim: explicit id held by another writer -> refuse",
+                  rc == 1, str(rc))
+            # --- (5) release frees ids --------------------------------------
+            rc = capture_stdout(lambda: wc.cmd_release("W2", [test_ids[10], test_ids[11], test_ids[12]]))
+            reg4 = wc.load_registry()
+            check("writer_claim: release drops exactly the given ids",
+                  rc == 0 and reg4["leases"]["W2"]["ids"] == test_ids[13:20],
+                  str(reg4["leases"]["W2"]))
+            rc = capture_stdout(lambda: wc.cmd_claim("W3", ids=[test_ids[10]]))
+            reg5 = wc.load_registry()
+            check("writer_claim: released id claimable by another writer",
+                  rc == 0 and test_ids[10] in reg5["leases"]["W3"]["ids"],
+                  str(reg5["leases"]["W3"]))
+            # --- (6) expired leases are reclaimed ---------------------------
+            reg6 = wc.load_registry()
+            reg6["leases"]["W3"]["expires_at"] = "2020-01-01T00:00:00Z"
+            wc.save_registry(reg6)
+            rc = capture_stdout(lambda: wc.cmd_claim("W2", ids=[test_ids[20]]))
+            reg7 = wc.load_registry()
+            check("writer_claim: expired lease reclaimed by another writer",
+                  rc == 0 and test_ids[20] in reg7["leases"]["W2"]["ids"] and
+                  "W3" not in reg7["leases"], json.dumps(reg7["leases"], ensure_ascii=False))
+            # --- (7) merge: earlier claim wins ------------------------------
+            local = wc.load_registry()
+            check("writer_claim: fixture precondition W2 holds AT-0021",
+                  test_ids[20] in local["leases"]["W2"]["ids"], str(local["leases"]["W2"]))
+            remote = {"schema_version": "1", "leases": {
+                "W3": {"ids": [test_ids[20], test_ids[40]],
+                       "claimed_at": "2020-01-01T00:00:01Z",
+                       "expires_at": "2099-01-01T00:00:00Z", "batch": "B01"}}}
+            remote_file = tdp / "remote-claims.json"
+            remote_file.write_text(json.dumps(remote), encoding="utf-8")
+            rc = capture_stdout(lambda: wc.cmd_merge(str(remote_file)))
+            reg8 = wc.load_registry()
+            check("writer_claim: merge - older remote claim wins the conflict",
+                  rc == 0 and reg8["leases"]["W3"]["ids"] == [test_ids[20], test_ids[40]] and
+                  test_ids[20] not in reg8["leases"]["W2"]["ids"],
+                  json.dumps(reg8["leases"], ensure_ascii=False))
+            check("writer_claim: merge - loser keeps its remaining ids",
+                  reg8["leases"]["W2"]["ids"] == test_ids[13:20],
+                  str(reg8["leases"]["W2"]))
+            # --- (8) show ----------------------------------------------------
+            rc = capture_stdout(lambda: wc.cmd_show())
+            check("writer_claim: show exits 0", rc == 0, str(rc))
+        finally:
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            wc.REGISTRY = orig_registry
+    check("production matrix untouched by writer-claim tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
+def capture_stdout(fn):
+    """Run fn with stdout swallowed; return fn's return value (tests only
+    assert rc, the command output is noise here)."""
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = fn()
+    return rc
+
+
+def test_factory_queue():
+    """factory_queue.py - write-ahead queue processor (TURBO QUEUE contract):
+    (1) 10 PLANNED rows queued -> 5 sequential pairs, all 5 published inside
+        ONE run (real scoped QA, publish PASS-only, checkpoint per pair);
+    (2) re-queuing published ids -> fatal refuse, nothing mutated;
+    (3) duplicate id in queue -> fatal refuse;
+    (4) a QA-failing article makes only its own pair recoverable; later
+        pairs still publish (no rollback of successful pairs);
+    (5) report file rewritten per run; lock/txn always clean afterwards."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    import run_article_batch as rab  # noqa: E402
+    import factory_queue as fq  # noqa: E402
+    import score_article_seo  # noqa: E402
+    orig_report = fq.REPORT
+    orig_run = rab.run
+    orig_seo_dir = score_article_seo.SEO_DIR
+    orig_articles_dir = score_article_seo.ARTICLES_DIR
+    saved_env = {k: os.environ.get(k) for k in
+                 ("CONTENT_MATRIX", "PROGRESS_FILE", "WRITER_CHECKPOINT",
+                  "FACTORY_THROUGHPUT", "SEO_REPORTS_DIR")}
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        fc.PROGRESS = tdp / "progress.json"
+        fc.THROUGHPUT = tdp / "throughput.json"
+        fc.LOCK = tdp / "lock.json"
+        fc.TXN = tdp / "txn" / "txn.json"
+        fq.REPORT = tdp / "factory-queue-last-run.json"
+        score_article_seo.SEO_DIR = tdp / "seo"
+        score_article_seo.ARTICLES_DIR = score_article_seo.SEO_DIR / "articles"
+        # score_article.py runs as a REAL subprocess; the publish-time rebuild
+        # commands (sitemap/hubs/shell) are faked so the test never rewrites
+        # derived site state from the fixture matrix.
+        def selective_run(cmd):
+            if cmd and cmd[0] == "score_article.py":
+                return orig_run(cmd)
+            return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+        rab.run = selective_run
+        os.environ["CONTENT_MATRIX"] = str(fc.MATRIX)
+        os.environ["PROGRESS_FILE"] = str(fc.PROGRESS)
+        os.environ["WRITER_CHECKPOINT"] = str(fc.CHECKPOINT)
+        os.environ["FACTORY_THROUGHPUT"] = str(fc.THROUGHPUT)
+        os.environ["SEO_REPORTS_DIR"] = str(score_article_seo.SEO_DIR)
+        orig_rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
+        orig_by = {x["article_id"]: x for x in orig_rows}
+        test_ids = [f"AT-{i:04d}" for i in range(1, 11)]  # AT-0001..AT-0010
+
+        def write_rows(status_map=None, path_overrides=None):
+            rows = [dict(r) for r in orig_rows]
+            by = {x["article_id"]: x for x in rows}
+            for x in rows:
+                if x["article_id"] in test_ids:
+                    x["status"] = (status_map or {}).get(x["article_id"], "PLANNED")
+                    x["repair_attempts"] = "0"
+                else:
+                    x["status"] = "PUBLISHED"
+            for aid, p in (path_overrides or {}).items():
+                by[aid]["output_path"] = p
+            with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+                w.writeheader()
+                w.writerows(rows)
+
+        try:
+            # --- (1) 10 PLANNED rows -> 5 pairs, all published -------------
+            write_rows()
+            rc = fq.run_queue("B01", "new", list(test_ids))
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids}
+            check("queue: rc 0 with a fully publishable queue", rc == 0, str(rc))
+            check("queue: all 10 queue ids PUBLISHED",
+                  all(v == "PUBLISHED" for v in st.values()), str(st))
+            rep = json.loads(fq.REPORT.read_text(encoding="utf-8"))
+            check("queue: report has 5 pairs, 10 published, none recoverable",
+                  len(rep["pairs"]) == 5 and len(rep["queue"]) == 10 and
+                  rep["published_total"] == 10 and rep["recoverable_ids"] == [] and
+                  all(e["status"] == "published" for e in rep["pairs"]),
+                  json.dumps(rep)[:400])
+            check("queue: pairs are deterministic chunks of 2 in matrix order",
+                  [e["ids"] for e in rep["pairs"]] ==
+                  [test_ids[i:i + 2] for i in range(0, 10, 2)],
+                  str([e["ids"] for e in rep["pairs"]]))
+            cp = fc.read_checkpoint() or {}
+            check("queue: checkpoint records all published ids",
+                  set(test_ids) <= set(cp.get("published_ids") or []),
+                  str(cp.get("published_ids")))
+            check("queue: no lock left behind", not fc.LOCK.exists())
+            check("queue: no txn marker left behind", not fc.txn_pending())
+            # --- (2) re-queue published ids -> fatal refuse -----------------
+            rc = fq.run_queue("B01", "new", list(test_ids))
+            check("queue: re-queue of PUBLISHED ids refuses (rc 1)", rc == 1, str(rc))
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids}
+            check("queue: refusal mutates nothing (rows stay PUBLISHED)",
+                  all(v == "PUBLISHED" for v in st.values()), str(st))
+            # --- (3) duplicate id -> fatal refuse ---------------------------
+            write_rows()
+            rc = fq.run_queue("B01", "new", [test_ids[0], test_ids[0]])
+            check("queue: duplicate id in queue refuses (rc 1)", rc == 1, str(rc))
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids}
+            check("queue: duplicate refusal mutates nothing",
+                  all(v == "PLANNED" for v in st.values()), str(st))
+            # --- (4) one failing article -> only its pair recoverable ------
+            broken = tdp / "broken.html"
+            broken.write_text("<html><body><p>qua ngan</p></body></html>", encoding="utf-8")
+            write_rows(path_overrides={test_ids[2]: str(broken)})  # pair 2 broken
+            rc = fq.run_queue("B01", "new", list(test_ids))
+            st = {x["article_id"]: x["status"] for x in fc.load_matrix()
+                  if x["article_id"] in test_ids}
+            check("queue: broken article pair -> rc 0 (recoverable, not fatal)",
+                  rc == 0, str(rc))
+            check("queue: only the broken article stays unpublished",
+                  st[test_ids[2]] != "PUBLISHED" and
+                  all(st[a] == "PUBLISHED" for a in test_ids if a != test_ids[2]),
+                  str(st))
+            rep = json.loads(fq.REPORT.read_text(encoding="utf-8"))
+            check("queue: report marks exactly the broken id recoverable",
+                  rep["recoverable_ids"] == [test_ids[2]] and
+                  rep["published_total"] == 9, json.dumps(rep)[:400])
+            pair2 = rep["pairs"][1]
+            check("queue: failed pair is partial (sibling published)",
+                  pair2["status"] == "partial" and pair2["published"] == [test_ids[3]] and
+                  test_ids[2] in pair2["repair"] or test_ids[2] in pair2["blocked"] or
+                  test_ids[2] in pair2["review"],
+                  json.dumps(pair2))
+            check("queue: no lock left behind after partial run", not fc.LOCK.exists())
+            check("queue: no txn marker left behind after partial run",
+                  not fc.txn_pending())
+        finally:
+            rab.run = orig_run
+            score_article_seo.SEO_DIR = orig_seo_dir
+            score_article_seo.ARTICLES_DIR = orig_articles_dir
+            fq.REPORT = orig_report
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            fc.PROGRESS = ROOT / "reports" / "batches" / "factory-progress.json"
+            fc.THROUGHPUT = ROOT / "reports" / "batches" / "factory-throughput.json"
+            fc.LOCK = ROOT / "data" / "batches" / "lock.json"
+            fc.TXN = ROOT / "data" / "batches" / "txn" / "txn.json"
+            for k, v in saved_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+            if fc.txn_pending():
+                fc.recover_txn()
+            fc.release_lock()
+    check("production matrix untouched by factory-queue tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def main():
     t0 = time.time()
-    test_facts()
     test_public_pages()
     test_matrix()
     test_scripts()
@@ -1688,6 +1979,8 @@ def main():
     test_continuous_factory()
     test_driver_fail_closed()
     test_push_selection_and_repair()
+    test_writer_claim()
+    test_factory_queue()
     test_seo_scorer()
     test_support_no_zalo()
     print(f"\n{PASS} passed, {len(FAIL)} failed ({time.time()-t0:.1f}s)")
