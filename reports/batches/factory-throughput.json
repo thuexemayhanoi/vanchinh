@@ -1,13 +1,13 @@
 {
   "current_batch": "B35",
   "chunk_size": 2,
-  "chunks_completed": 446,
-  "written": 1748,
-  "quality_pass": 1748,
-  "seo_pass": 1748,
-  "published": 1748,
+  "chunks_completed": 447,
+  "written": 1750,
+  "quality_pass": 1750,
+  "seo_pass": 1750,
+  "published": 1750,
   "repair_count": 21,
-  "publish_operations": 446,
-  "elapsed_minutes": 6923.7,
-  "effective_articles_per_hour": 15.1
+  "publish_operations": 447,
+  "elapsed_minutes": 6927.1,
+  "effective_articles_per_hour": 15.2
 }
