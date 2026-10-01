@@ -14,7 +14,7 @@ Hợp đồng ngắn gọn, bắt buộc với mọi AI agent làm việc trên 
 
 ## Batch / chunk
 
-- Batch = 50 bài (B01–B40, tổng 2.000) là đơn vị tổ chức matrix; chunk làm việc của writer = 2 bài (MICRO CONTINUOUS LOOP). Writer/Mistral viết và push 2 bài mới mỗi lượt rồi lặp liên tục; mỗi cặp 2 bài được push sớm làm safe checkpoint chống mất tiến độ khi workspace reset. Hard invariant workflow giữ nguyên: một push tối đa 50 file bài mới (`factory-publish.yml` refuse > 50). Không còn pilot 5.
+- Batch = 50 bài (B01–B40, tổng 2.000) là đơn vị tổ chức matrix; đơn vị QA/publish của factory = PAIR 2 bài, nhưng writer dùng WRITE-AHEAD QUEUE: một push xếp hàng 2..10 bài mới, factory (`factory_queue.py`) tự chia pair 2 và tiêu thụ tuần tự trong cùng một run. Hard invariant workflow: một push tối đa 10 file bài mới (`factory-publish.yml` refuse > 10). Multi-writer: tối đa 3 writer lease ID disjoint qua `scripts/writer_claim.py` (TTL 48h, max 10 ID/writer).
 - INVARIANT: batch hiện tại chưa hoàn tất PHẢI hoàn tất trước. `claim` từ chối batch khác batch-chưa-hoàn-thành đầu tiên. KHÔNG bao giờ nhảy sang B02 khi B01 còn row chưa terminal. Terminal: PUBLISHED, BLOCKED, FAIL. `next_batch` trong progress report không phải quyền claim.
 - Thứ tự deterministic: batch_id + article_id. PUBLISHED không bao giờ bị claim lại.
 
@@ -32,12 +32,12 @@ RECOVER → RESUME (hoàn tất dở của batch đang chạy) → REPAIR → QA
 
 Mọi writer run TUÂN THEO vòng lặp liên tục trong docs/CONTINUOUS-WRITER.md:
 
-FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → WRITE 2 file bài (micro chunk) → LOCAL SCOPED QA (quality PASS + SEO ≥ 80, không critical) → PUSH 2 (file mới; safe checkpoint) → WAIT factory-publish → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → WRITE 2 NEXT → REPEAT (không dừng sau mỗi cặp 2 bài).
+FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trước) → CLAIM (writer_claim.py lease) → WRITE 2..10 file bài (write-ahead queue) → LOCAL SCOPED QA từng bài (quality PASS + SEO ≥ 80, không critical) → PUSH QUEUE (file mới; safe checkpoint) → WAIT factory-publish (tiêu thụ từng pair 2 tuần tự) → VERIFY (CI/Pages, no lock/txn) → FETCH FRESH MAIN → QUEUE NEXT → REPEAT (không dừng sau mỗi queue).
 
-- KHÔNG kết thúc run sau một cặp 2 bài thành công. Nếu không có blocker, bắt đầu NGAY cặp 2 bài kế tiếp.
-- KHÔNG dừng chỉ vì một cặp 2 bài vừa xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
+- KHÔNG kết thúc run sau một queue thành công. Nếu không có blocker, bắt đầu NGAY queue kế tiếp.
+- KHÔNG dừng chỉ vì một pair/queue vừa xong, một workflow/ Pages deploy/ batch xong, hay report được sinh — đó là checkpoint.
 - Chỉ dừng khi: 2.000 row terminal hợp lệ, runtime/session buộc dừng tại điểm an toàn (không lock, không txn, fresh main), hoặc blocker thật cần con người.
-- Giữ nguyên: micro loop 2 bài/lượt push sớm (tối đa 50 file bài mới mỗi push là hard max workflow); một writer/ operator duy nhất; không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác.
+- Giữ nguyên: pair 2 bài là đơn vị QA/publish; write-ahead queue 2..10 bài/push (10 là hard max); không force push; repository truth thắng; batch active phải terminal trước khi sang batch khác; pair fail là recoverable, KHÔNG rollback pair đã publish.
 
 ## Phân vai
 
@@ -54,7 +54,7 @@ FETCH FRESH MAIN → RECOVER IF NEEDED → RESUME (REPAIR/QA/PASS pending trư�
 ## Blog UI / article shell
 
 - File bài = bare article (head + đúng một `<article>`); chrome site/TOC/related/CTA là derived state của `scripts/build_article_shell.py`. Sửa UI blog = sửa shell builder/CSS/hub generator, KHÔNG sửa tay từng file bài.
-- Push THÊM file bài mới → `factory-publish.yml` claim ĐÚNG các ID có file (row PLANNED của active batch, file tồn tại, max 50; >50 file mới trong một push → refuse). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim.
+- Push THÊM file bài mới → `factory-publish.yml` queue ĐÚNG các ID có file (row PLANNED của active batch, file tồn tại, 2..10/push; >10 file mới trong một push → refuse). Row PLANNED chưa có file KHÔNG BAO GIỜ bị claim.
 - Push SỬA file bài của row WRITING/QA/REVIEW/REPAIR/PASS → workflow QA + publish đúng các ID đó (repair mode), KHÔNG claim row PLANNED mới. Push sửa row PUBLISHED (shell rebuild, UI work) KHÔNG kích hoạt gì cả.
 - Scope của workflow do `scripts/factory_push_selection.py` derive từ `git diff` — deterministic, không AI/API key.
 - Shell không được đổi URL/canonical/JSON-LD/prose; CTA phải resolve từ business-facts, không hard-code.

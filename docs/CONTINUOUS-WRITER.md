@@ -2,13 +2,14 @@
 
 Tài liệu này là nguồn chuẩn duy nhất cho cách một writer run (agent AI bên ngoài) PHẢI hoạt động liên tục. README §24 và AGENTS.md tham chiếu tài liệu này.
 
-## Mô hình canonical (Simple Production Mode — MICRO CONTINUOUS LOOP)
+## Mô hình canonical (Simple Production Mode — TURBO WRITE-AHEAD QUEUE)
 
-- Chunk làm việc = 2 bài mỗi lượt writer (micro push). Production loop: WRITE 2 → SCOPED QA → PUSH 2 → WAIT CI GREEN → NEXT 2 → REPEAT. Lý do: push sớm từng cặp 2 bài tạo safe checkpoint trên main, chống mất tiến độ khi workspace reset; KHÔNG giữ nhiều bài chưa push trong workspace.
-- Batch (B01–B40, tổng 2.000) vẫn là đơn vị tổ chức của matrix; writer làm việc theo các cặp 2 bài liên tiếp trong batch active cho đến khi batch đó terminal.
-- Push = TỐI ĐA 50 file bài MỚI một lần vẫn là hard invariant của workflow (push > 50 file mới → `factory-publish.yml` REFUSE); micro loop chuẩn push đúng 2 file mới mỗi lần.
-- GitHub Actions (`factory-publish.yml`) là event-driven: claim đúng ID có file → scoped QA → publish → push derived state. Actions KHÔNG viết prose, KHÔNG gọi Mistral, KHÔNG schedule writer, KHÔNG tự tạo chunk kế tiếp.
-- Sau publish thành công, trách nhiệm QUAY VỀ writer: fetch fresh main và viết cặp 2 bài kế tiếp NGAY nếu runtime còn.
+- Đơn vị QA/publish của factory = PAIR 2 bài. Writer dùng WRITE-AHEAD QUEUE: một push xếp hàng 2..10 bài mới, `factory-publish.yml` tự chia queue thành các pair 2 và tiêu thụ tuần tự (2 → QA/publish → 2 → QA/publish → …) trong CÙNG một production run. Push sớm cả queue tạo safe checkpoint trên main, chống mất tiến độ khi workspace reset.
+- Batch (B01–B40, tổng 2.000) vẫn là đơn vị tổ chức của matrix; writer làm việc theo các ID liên tiếp trong batch active cho đến khi batch đó terminal.
+- Push = TỐI ĐA 10 file bài MỚI một lần là hard invariant của workflow (push > 10 file mới → `factory-publish.yml` REFUSE; queue tối thiểu 2 bài).
+- Multi-writer: tối đa 3 writer chạy song song, KHÔNG BAO GIỜ trùng ID, qua lease registry `scripts/writer_claim.py` (xem dưới).
+- GitHub Actions (`factory-publish.yml`) là event-driven: queue đúng ID có file → từng pair: claim → scoped QA → publish → checkpoint → push derived state. Actions KHÔNG viết prose, KHÔNG gọi Mistral, KHÔNG schedule writer, KHÔNG tự tạo chunk kế tiếp.
+- Sau publish thành công, trách nhiệm QUAY VỀ writer: fetch fresh main và viết queue kế tiếp NGAY nếu runtime còn.
 
 ## LOOP (bắt buộc mỗi writer run)
 
@@ -16,14 +17,16 @@ Tài liệu này là nguồn chuẩn duy nhất cho cách một writer run (agen
 FETCH FRESH MAIN
 → RECOVER IF NEEDED (txn marker)
 → RESUME (hoàn tất dở: REPAIR/QA/PASS pending của active batch)
-→ WRITE 2 (file bài thật theo matrix + docs/ARTICLE-RULES.md)
-→ LOCAL SCOPED QA (quality PASS + SEO >= 80, không hạ threshold, không critical)
-→ PUSH 2 (file mới; safe checkpoint trên main)
-→ WAIT factory-publish.yml + CI GREEN
-→ VERIFY (workflow green, Pages deploy, no lock/txn)
+→ CLAIM (writer_claim.py lease 2..10 ID kế tiếp chưa bị ai lease)
+→ WRITE 2..10 (file bài thật theo matrix + docs/ARTICLE-RULES.md)
+→ LOCAL SCOPED QA từng bài (quality PASS + SEO >= 80, không hạ threshold, không critical)
+→ PUSH QUEUE (file mới; safe checkpoint trên main)
+→ WAIT factory-publish.yml + CI GREEN (factory tự tiêu thụ từng pair 2)
+→ VERIFY (workflow green, Pages deploy, no lock/txn, queue report không fatal)
+→ RELEASE lease đã publish (writer_claim.py release)
 → FETCH FRESH MAIN
-→ WRITE 2 NEXT
-→ REPEAT (không dừng sau mỗi cặp 2 bài)
+→ QUEUE NEXT
+→ REPEAT (không dừng sau mỗi queue)
 ```
 
 ## Không được dừng vì
@@ -45,10 +48,23 @@ FETCH FRESH MAIN
 
 Dừng tạm do rate-limit/ lỗi connector tạm thời KHÔNG PHẢI quyền restart factory — retry sau.
 
+## TURBO MULTI-WRITER — lease protocol (`scripts/writer_claim.py`)
+
+Mục tiêu: 3 writer → mỗi writer buffer tối đa 10 bài → push → 1 factory queue → 2+2+2+2+2.
+
+- Lease registry: `data/batches/writer-claims.json` (env `WRITER_CLAIMS`). Writer commit + push registry này; path nằm ngoài paths filter của `factory-publish.yml` nên KHÔNG kích hoạt production run.
+- `python3 scripts/writer_claim.py claim --writer W1 [--count N|--ids A,B]`: lease N row PLANNED của active batch theo thứ tự matrix, trừ các ID đang bị lease sống của writer khác. Cap 10 ID sống/writer; tối đa 3 writer; TTL 48h (lease hết hạn tự động được reclaim).
+- `python3 scripts/writer_claim.py release --writer W1 --ids A,B`: bỏ lease (chạy sau khi factory publish xong ID đó, hoặc khi bỏ bài).
+- `python3 scripts/writer_claim.py show`: trạng thái registry + các ID PLANNED còn tự do.
+- `python3 scripts/writer_claim.py merge --file registry.json`: gộp registry từ remote vào local khi push registry thua race (non-fast-forward). Xung đột ID: claimed_at sớm hơn thắng (thứ bậc phụ: tên writer nhỏ hơn); writer thua giữ các ID còn lại và claim bù sau. KHÔNG BAO GIỜ force push registry.
+- Giao thức push race: fetch fresh main → `merge` registry remote → claim lại phần còn tự do → push lại. Ép push registry bị từ chối là vi phạm contract.
+- Một writer push tối đa 10 file bài mới (queue contract); queue bị từ chối (refuse) thì sửa theo lý do refuse rồi push lại, KHÔNG chia nhỏ bằng cách sửa workflow.
+- Bài trong buffer không còn khớp repository truth (ID đã PUBLISHED / đổi batch / repair) → revalidate từ matrix mới trước khi push; tuyệt đối không ép push.
+
 ## Quy tắc an toàn mỗi vòng
 
-- Mỗi cặp 2 bài: FETCH → RECOVER → RESUME → WRITE 2 → QA → PUSH 2 → VERIFY → lặp.
-- Một writer/ operator duy nhất được mutate production; lock/ txn của operator khác → không cạnh tranh.
+- Mỗi queue: FETCH → RECOVER → RESUME → CLAIM → WRITE 2..10 → QA → PUSH QUEUE → VERIFY → RELEASE → lặp.
+- Tối đa 3 writer song song; ID phân phối qua lease registry, KHÔNG BAO GIỜ viết ID do writer khác giữ lease.
 - `factory-publish.yml` tự push derived state → luôn fetch fresh main trước cặp kế; không push từ HEAD cũ; không force push.
 - Batch active phải terminal trước khi sang batch khác; `next_batch` không phải quyền claim.
 - MATRIX là source of truth; checkpoint là derived operational state.

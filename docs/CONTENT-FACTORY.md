@@ -39,10 +39,11 @@ Terminal: FAIL, BLOCKED
 
 ## Production mode (Simple Production Mode, canonical)
 
-Chunk làm việc = 2 bài (MICRO CONTINUOUS LOOP; batch 50 bài vẫn là đơn vị tổ chức matrix); writer viết và push 2 bài mới mỗi lượt rồi lặp liên tục (≤ 50 file mới/push là hard max workflow):
+Đơn vị QA/publish = pair 2 bài; writer dùng WRITE-AHEAD QUEUE — viết 2..10 bài rồi push cả queue một lần (≤ 10 file mới/push là hard max workflow), factory_queue.py tự chia pair 2 và tiêu thụ tuần tự trong cùng một run:
 
 ```bash
-python3 scripts/run_article_batch.py claim B01 --limit 2   # micro chunk chuẩn (max 50 vẫn là hard invariant)
+python3 scripts/writer_claim.py claim --writer W1            # lease 2..10 ID kế tiếp (multi-writer, không trùng ID)
+python3 scripts/run_article_batch.py claim B01 --limit 2   # pair 2 vẫn là đơn vị tiêu thụ (queue max 10 là hard invariant)
 # writer viết 2 file; qa scoped; publish grouped
 python3 scripts/run_article_batch.py qa B01                 # scoped theo checkpoint current chunk / --ids
 python3 scripts/run_article_batch.py publish B01            # grouped publish batch hiện tại
@@ -52,7 +53,7 @@ python3 scripts/run_article_batch.py throughput             # sinh factory-throu
 
 Quy tắc:
 
-- claim chuyển đúng N row PLANNED → WRITING (mặc định 50 = cả batch). `claim --ids` claim đúng danh sách ID tường minh (workflow dùng chế độ này: claim đúng các row có file trong push, max 50).
+- claim chuyển đúng N row PLANNED → WRITING (mặc định 50 = cả batch). `claim --ids` claim đúng danh sách ID tường minh (factory_queue dùng chế độ này cho từng pair, đúng các row có file trong push, queue 2..10/push). Multi-writer phân phối ID qua `scripts/writer_claim.py` (lease TTL 48h, cap 10/writer, tối đa 3 writer).
 - qa scoped: chỉ chấm chunk hiện tại (checkpoint) hoặc --ids tường minh; row không chạm giữ nguyên trạng thái. `qa --ids` được phép re-score row WRITING/QA/REVIEW/REPAIR/PASS (repair/resume: push sửa file bài của các row này); scoped mặc định chỉ chấm WRITING/QA/REPAIR.
 - Row WRITING không có file trong chunk hiện tại → REPAIR/BLOCKED, không phá trạng thái batch khác. Row PLANNED chưa có file không bao giờ bị workflow claim (selection derive từ file thực tế trong push).
 - PUBLISHED không bao giờ bị claim lại.
@@ -64,12 +65,12 @@ Quy tắc:
 
 ## Vòng đời một batch (Simple Production Mode)
 
-Chunk = 2 bài, writer viết từng cặp 2 bài rồi push một lượt (micro continuous loop; xem docs/CONTINUOUS-WRITER.md):
+Chunk = pair 2 bài; writer viết queue 2..10 bài rồi push một lượt (write-ahead queue; xem docs/CONTINUOUS-WRITER.md):
 
 ```bash
 python3 scripts/run_article_batch.py progress          # xác định active batch (batch đầu tiên còn row chưa terminal)
 # → writer chọn 2 row PLANNED kế tiếp (thứ tự deterministic), VIẾT file bài theo manifest + docs/ARTICLE-RULES.md
-# → local scoped QA → PUSH 2 (file mới; ≤ 50 file mới là hard max) → factory-publish.yml: claim đúng ID có file → qa → publish
+# → local scoped QA → PUSH QUEUE 2..10 file (file mới; ≤ 10 file mới là hard max) → factory-publish.yml: queue đúng ID có file → factory_queue tiêu thụ từng pair 2: claim → qa → publish
 python3 scripts/run_article_batch.py checkpoint          # xác nhận batch đã reconcile
 # → FETCH FRESH MAIN → cặp 2 bài kế tiếp → LẶP LẠI
 python3 scripts/run_article_batch.py recover            # chỉ khi run bị gián đoạn giữa chừng
