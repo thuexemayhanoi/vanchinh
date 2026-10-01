@@ -735,7 +735,9 @@
     "KN-0299",
     "KN-0300",
     "KN-0301",
-    "KN-0302"
+    "KN-0302",
+    "KN-0303",
+    "KN-0304"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2343,11 +2345,13 @@
     "KN-0299",
     "KN-0300",
     "KN-0301",
-    "KN-0302"
+    "KN-0302",
+    "KN-0303",
+    "KN-0304"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T03:37:14Z",
-  "chunks_completed": 373,
-  "publish_operations": 373
+  "updated_at": "2026-10-01T03:41:27Z",
+  "chunks_completed": 374,
+  "publish_operations": 374
 }
