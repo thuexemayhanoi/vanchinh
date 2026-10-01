@@ -719,7 +719,9 @@
     "KN-0283",
     "KN-0284",
     "KN-0285",
-    "KN-0286"
+    "KN-0286",
+    "KN-0287",
+    "KN-0288"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2311,11 +2313,13 @@
     "KN-0283",
     "KN-0284",
     "KN-0285",
-    "KN-0286"
+    "KN-0286",
+    "KN-0287",
+    "KN-0288"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T03:16:07Z",
-  "chunks_completed": 365,
-  "publish_operations": 365
+  "updated_at": "2026-10-01T03:21:55Z",
+  "chunks_completed": 366,
+  "publish_operations": 366
 }
