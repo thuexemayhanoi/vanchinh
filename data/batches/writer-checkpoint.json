@@ -660,6 +660,8 @@
     "KN-0224",
     "KN-0227",
     "KN-0228",
+    "KN-0231",
+    "KN-0232",
     "KN-0237",
     "KN-0238"
   ],
@@ -2194,12 +2196,14 @@
     "KN-0224",
     "KN-0227",
     "KN-0228",
+    "KN-0231",
+    "KN-0232",
     "KN-0237",
     "KN-0238"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T02:07:29Z",
-  "chunks_completed": 336,
-  "publish_operations": 336
+  "updated_at": "2026-10-01T02:11:21Z",
+  "chunks_completed": 337,
+  "publish_operations": 337
 }
