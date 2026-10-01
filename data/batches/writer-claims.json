@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "updated_at": "2026-10-01T23:26:12.061Z",
+  "updated_at": "2026-10-01T23:35:29Z",
   "leases": {
     "mistral-writer-1": {
       "ids": [
@@ -52,6 +52,23 @@
       "claimed_at": "2026-10-01T23:00:08Z",
       "expires_at": "2026-10-03T23:00:08Z",
       "batch": "B37"
+    },
+    "mistral-writer-4": {
+      "ids": [
+        "XM-0271",
+        "XM-0272",
+        "XM-0273",
+        "XM-0274",
+        "XM-0275",
+        "XM-0276",
+        "XM-0277",
+        "XM-0278",
+        "XM-0279",
+        "XM-0280"
+      ],
+      "claimed_at": "2026-10-01T23:35:29Z",
+      "expires_at": "2026-10-03T23:35:29Z",
+      "batch": "B39"
     }
   }
 }
