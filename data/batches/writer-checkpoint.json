@@ -907,7 +907,17 @@
     "XM-0121",
     "XM-0122",
     "XM-0123",
-    "XM-0124"
+    "XM-0124",
+    "XM-0131",
+    "XM-0132",
+    "XM-0133",
+    "XM-0134",
+    "XM-0135",
+    "XM-0136",
+    "XM-0137",
+    "XM-0138",
+    "XM-0139",
+    "XM-0140"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2687,11 +2697,21 @@
     "XM-0121",
     "XM-0122",
     "XM-0123",
-    "XM-0124"
+    "XM-0124",
+    "XM-0131",
+    "XM-0132",
+    "XM-0133",
+    "XM-0134",
+    "XM-0135",
+    "XM-0136",
+    "XM-0137",
+    "XM-0138",
+    "XM-0139",
+    "XM-0140"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T22:04:00Z",
-  "chunks_completed": 459,
-  "publish_operations": 459
+  "updated_at": "2026-10-01T22:23:04Z",
+  "chunks_completed": 464,
+  "publish_operations": 464
 }
