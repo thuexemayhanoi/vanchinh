@@ -571,7 +571,9 @@
     "KN-0135",
     "KN-0136",
     "KN-0137",
-    "KN-0138"
+    "KN-0138",
+    "KN-0139",
+    "KN-0140"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2015,11 +2017,13 @@
     "KN-0135",
     "KN-0136",
     "KN-0137",
-    "KN-0138"
+    "KN-0138",
+    "KN-0139",
+    "KN-0140"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T00:46:34Z",
-  "chunks_completed": 291,
-  "publish_operations": 291
+  "updated_at": "2026-10-01T00:49:04Z",
+  "chunks_completed": 292,
+  "publish_operations": 292
 }
