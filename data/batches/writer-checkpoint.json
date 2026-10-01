@@ -799,7 +799,9 @@
     "XM-0013",
     "XM-0014",
     "XM-0015",
-    "XM-0016"
+    "XM-0016",
+    "XM-0017",
+    "XM-0018"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2471,11 +2473,13 @@
     "XM-0013",
     "XM-0014",
     "XM-0015",
-    "XM-0016"
+    "XM-0016",
+    "XM-0017",
+    "XM-0018"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T10:40:48Z",
-  "chunks_completed": 405,
-  "publish_operations": 405
+  "updated_at": "2026-10-01T10:43:45Z",
+  "chunks_completed": 406,
+  "publish_operations": 406
 }
