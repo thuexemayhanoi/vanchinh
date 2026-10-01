@@ -1,0 +1,20 @@
+{
+  "article_id": "KN-0124",
+  "word_count": 1703,
+  "seo_score": 86,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 13,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3"
+  ]
+}
