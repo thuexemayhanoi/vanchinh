@@ -1,13 +1,13 @@
 {
   "current_batch": "B32",
   "chunk_size": 2,
-  "chunks_completed": 361,
-  "written": 1578,
-  "quality_pass": 1578,
-  "seo_pass": 1578,
-  "published": 1578,
+  "chunks_completed": 362,
+  "written": 1580,
+  "quality_pass": 1580,
+  "seo_pass": 1580,
+  "published": 1580,
   "repair_count": 21,
-  "publish_operations": 361,
-  "elapsed_minutes": 5814.8,
+  "publish_operations": 362,
+  "elapsed_minutes": 5816.1,
   "effective_articles_per_hour": 16.3
 }
