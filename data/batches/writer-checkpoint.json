@@ -557,7 +557,9 @@
     "KN-0121",
     "KN-0122",
     "KN-0123",
-    "KN-0124"
+    "KN-0124",
+    "KN-0125",
+    "KN-0126"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1987,11 +1989,13 @@
     "KN-0121",
     "KN-0122",
     "KN-0123",
-    "KN-0124"
+    "KN-0124",
+    "KN-0125",
+    "KN-0126"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T00:37:46Z",
-  "chunks_completed": 284,
-  "publish_operations": 284
+  "updated_at": "2026-10-01T00:38:55Z",
+  "chunks_completed": 285,
+  "publish_operations": 285
 }
