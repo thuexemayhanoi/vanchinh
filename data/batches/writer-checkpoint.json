@@ -785,7 +785,9 @@
     "KN-0349",
     "KN-0350",
     "XM-0001",
-    "XM-0002"
+    "XM-0002",
+    "XM-0003",
+    "XM-0004"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2443,11 +2445,13 @@
     "KN-0349",
     "KN-0350",
     "XM-0001",
-    "XM-0002"
+    "XM-0002",
+    "XM-0003",
+    "XM-0004"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T05:36:57Z",
-  "chunks_completed": 398,
-  "publish_operations": 398
+  "updated_at": "2026-10-01T05:41:57Z",
+  "chunks_completed": 399,
+  "publish_operations": 399
 }
