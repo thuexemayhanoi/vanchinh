@@ -1,23 +1,30 @@
 name: Factory Publish (chunked)
 
 # Automated, deterministic publish pipeline. NO AI, NO API keys, NO secrets.
-# The external WRITER (Mistral run) commits article files under cam-nang/;
+# The external WRITER(s) (Mistral runs) commit article files under cam-nang/;
 # this workflow derives the EXACT scope from the files added/modified in the
-# push (scripts/factory_push_selection.py) and then runs the canonical
-# factory tooling:
-#   NEW article push:    claim exactly the added-article IDs (max 50)
-#                        -> scoped QA (quality + SEO) -> transactional publish
-#   REPAIR article push: QA + publish EXACTLY the repaired IDs; NEVER claims
-#                        fresh PLANNED rows
-#   BACKLOG:             PLANNED rows whose files already exist (<= 50,
-#                        deterministic article_id order)
-# Publish gate: quality PASS AND SEO >= 80. Single commit of derived state.
-# Simple Production Mode: scoped QA + light matrix smoke per push.
-# Full-site gates (full test suite, validate_site, full-site cannibalization,
-# node parity) are NOT part of the per-batch loop; they run in CI
-# (article-quality/site-quality) and at final verification / the
-# 2000-article full audit.
-# See docs/FACTORY-PUBLISH-WORKFLOW.md.
+# push (scripts/factory_push_selection.py) and revalidates everything against
+# FRESH repository truth (fetch origin/main BEFORE any mutation).
+#
+# TURBO QUEUE CONTRACT (WRITE-AHEAD QUEUE, supersedes "exact 2 per push"):
+#   - one writer push queues 2..10 consecutive article files;
+#   - the queue is validated (no duplicates, no PUBLISHED rows, no rows
+#     outside the active batch, matrix order) and split into deterministic
+#     PAIRS of 2;
+#   - scripts/factory_queue.py consumes the pairs sequentially inside this
+#     SAME production run: pair -> claim -> scoped QA -> transactional
+#     publish (PASS only) -> checkpoint -> next pair;
+#   - a failed pair NEVER rolls back already-published pairs; it stays
+#     recoverable (REVIEW/REPAIR/BLOCKED + checkpoint pending lists) and is
+#     reported explicitly for a follow-up repair push;
+#   - multi-writer: up to 3 independent writers lease disjoint ids via
+#     scripts/writer_claim.py (data/batches/writer-claims.json); that path is
+#     outside the paths filter and never triggers this workflow.
+# Publish gate: quality PASS AND SEO >= 80 (unchanged). Publisher
+# concurrency = 1 (single workflow concurrency group + one run-lock for the
+# whole queue run). Simple Production Mode: scoped QA + light matrix smoke
+# per push; full-site gates run in CI, not in this hot loop.
+# See docs/FACTORY-PUBLISH-WORKFLOW.md and docs/CONTINUOUS-WRITER.md.
 on:
   push:
     branches: [main]
@@ -36,35 +43,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Select push scope (exact IDs derived from added/modified article files)
+      - name: Capture push scope (diff of THIS push, before truth refresh)
+        run: |
+          set -e
+          # Article files ADDED and MODIFIED by this writer push (PUBLISHED-row
+          # modifications are shell rebuilds and are ignored by selection).
+          git diff --name-only --diff-filter=A HEAD~1 HEAD -- cam-nang/ > /tmp/added.txt || true
+          git diff --name-only --diff-filter=M HEAD~1 HEAD -- cam-nang/ > /tmp/modified.txt || true
+          echo "push added article files: $(wc -l < /tmp/added.txt || echo 0), modified: $(wc -l < /tmp/modified.txt || echo 0)"
+          cp /tmp/added.txt /tmp/added.push.txt
+          cp /tmp/modified.txt /tmp/modified.push.txt
+      - name: Refresh repository truth (fetch origin/main; never force)
+        run: |
+          set -e
+          git fetch origin main
+          git checkout -B main origin/main
+          echo "factory truth: $(git log -1 --format='%h %s')"
+      - name: Select queue scope (exact IDs revalidated against fresh truth)
         id: select
         run: |
           set -e
-          # Article files ADDED and MODIFIED by this push (never PUBLISHED-row
-          # modifications - those are shell rebuilds and must not claim).
-          git diff --name-only --diff-filter=A HEAD~1 HEAD -- cam-nang/ > /tmp/added.txt || true
-          git diff --name-only --diff-filter=M HEAD~1 HEAD -- cam-nang/ > /tmp/modified.txt || true
-          echo "added article files: $(wc -l < /tmp/added.txt || echo 0), modified: $(wc -l < /tmp/modified.txt || echo 0)"
+          cp /tmp/added.push.txt /tmp/added.txt
+          cp /tmp/modified.push.txt /tmp/modified.txt
           python3 scripts/factory_push_selection.py --added /tmp/added.txt --modified /tmp/modified.txt | tee /tmp/selection.json
           python3 - <<'EOF'
           import json, os
           sel = json.load(open('/tmp/selection.json'))
+          queue_mode = 'repair' if sel['mode'] == 'repair' else 'new'
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"proceed={str(sel['proceed']).lower()}\n")
               f.write(f"mode={sel['mode']}\n")
+              f.write(f"queue_mode={queue_mode}\n")
               f.write(f"batch={sel['batch'] or ''}\n")
-              f.write(f"claim_ids={','.join(sel['claim_ids'])}\n")
-              f.write(f"qa_ids={','.join(sel['qa_ids'])}\n")
+              f.write(f"queue={','.join(sel['queue'])}\n")
+              f.write(f"pairs={sel['pair_count']}\n")
               f.write(f"refuse={sel['refuse'] or ''}\n")
           print(f"selection: mode={sel['mode']} batch={sel['batch']} "
-                f"claim={sel['claim_ids']} qa={sel['qa_ids']}")
+                f"queue={sel['queue']} pairs={sel['pair_count']}")
           if sel['refuse']:
               raise SystemExit(f"REFUSED: {sel['refuse']}")
           EOF
@@ -73,54 +95,59 @@ jobs:
         run: |
           test ! -f data/batches/txn/txn.json || { echo "pending txn marker present"; exit 1; }
           test ! -f data/batches/lock.json || { echo "lock present"; exit 1; }
-      - name: Claim batch (exactly the added-article IDs; max 50; never rows without files)
-        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.claim_ids != ''
-        run: python3 scripts/run_article_batch.py claim ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.claim_ids }}
-      - name: Scoped QA (quality score + SEO score of the exact push IDs)
-        id: qa
-        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
+      - name: Consume write-ahead queue (pair -> QA -> publish -> checkpoint, sequential)
+        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.queue != ''
         run: |
-          python3 scripts/run_article_batch.py qa ${{ steps.select.outputs.batch }} --ids ${{ steps.select.outputs.qa_ids }} | tee /tmp/qa.json
-      - name: Grouped transactional publish (quality PASS AND SEO >= 80, explicit IDs)
-        id: publish
-        if: steps.select.outputs.proceed == 'true' && steps.select.outputs.qa_ids != ''
-        continue-on-error: true
-        run: |
-          PASS_IDS=$(python3 - <<'EOF'
-          import json
-          lines = [l for l in open('/tmp/qa.json') if l.strip().startswith('{')]
-          print(','.join(json.loads(lines[-1])['pass']))
-          EOF
-          )
-          if [ -n "$PASS_IDS" ]; then
-            python3 scripts/run_article_batch.py publish ${{ steps.select.outputs.batch }} --ids "$PASS_IDS"
-          else
-            echo "no PASS rows from this QA round; nothing to publish (state still committed for review)"
-          fi
+          python3 scripts/factory_queue.py run \
+            --batch "${{ steps.select.outputs.batch }}" \
+            --mode "${{ steps.select.outputs.queue_mode }}" \
+            --ids "${{ steps.select.outputs.queue }}"
       - name: Light matrix smoke (scoped pre-push gate)
         if: steps.select.outputs.proceed == 'true'
         run: |
           python3 scripts/validate_content_matrix.py
           python3 scripts/check_matrix_sync.py
-      - name: Commit publish results (single commit per chunk)
+      - name: Queue run summary (published + recoverable IDs, explicit)
         if: steps.select.outputs.proceed == 'true'
         run: |
+          python3 - <<'EOF'
+          import json
+          rep = json.load(open('reports/batches/factory-queue-last-run.json'))
+          print(f"queue done: batch={rep['batch']} mode={rep['mode']} "
+                f"pairs={len(rep['pairs'])} published={rep['published_total']}")
+          if rep.get('published_ids'):
+              print(f"published ids: {', '.join(rep['published_ids'])}")
+          if rep.get('recoverable_ids'):
+              print(f"RECOVERABLE (repair push needed): {', '.join(rep['recoverable_ids'])}")
+          if rep.get('fatal'):
+              raise SystemExit(f"fatal: {rep['fatal']}")
+          EOF
+      - name: Commit publish results (single commit per queue run)
+        if: steps.select.outputs.proceed == 'true'
+        run: |
+          set -e
           git config user.name "vanchinh-factory-bot"
           git config user.email "nguyentuantu2482@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             echo "no state changes to commit"
           else
-            git commit -m "factory: ${{ steps.select.outputs.batch }} ${{ steps.select.outputs.mode }} publish (${{ steps.select.outputs.qa_ids }}) [automated txn]"
-            git push
+            git commit -m "factory: ${{ steps.select.outputs.batch }} ${{ steps.select.outputs.queue_mode }} publish (${{ steps.select.outputs.queue }}) [automated txn]"
+            # push with truth refresh + rebase retry; NEVER force push
+            n=0
+            until git push; do
+              n=$((n+1))
+              if [ "$n" -ge 3 ]; then
+                echo "push failed after $n retries (non-FF races); leaving committed state for the next run"
+                exit 1
+              fi
+              echo "push race lost; fetching fresh truth and rebasing (attempt $n)"
+              git fetch origin main
+              git rebase origin/main || { git rebase --abort; echo "rebase conflict; aborting"; exit 1; }
+            done
           fi
       - name: Assert clean factory state
         if: steps.select.outputs.proceed == 'true'
         run: |
           test ! -f data/batches/lock.json || { echo "lock left behind"; exit 1; }
           test ! -f data/batches/txn/txn.json || { echo "txn marker left behind"; exit 1; }
-      - name: Report publish refusal if any
-        if: steps.select.outputs.proceed == 'true' && steps.publish.outcome == 'failure'
-        run: |
-          echo "publish refused (no eligible PASS rows or gate failure); state committed for review"
-          exit 1
