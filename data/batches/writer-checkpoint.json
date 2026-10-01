@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "batch": "B31",
-  "chunk_size": 1,
+  "batch": "B32",
+  "chunk_size": 2,
   "current_chunk_ids": [],
   "written_ids": [
     "DL-0271",
@@ -683,7 +683,9 @@
     "KN-0247",
     "KN-0248",
     "KN-0249",
-    "KN-0250"
+    "KN-0250",
+    "KN-0257",
+    "KN-0258"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2239,11 +2241,13 @@
     "KN-0247",
     "KN-0248",
     "KN-0249",
-    "KN-0250"
+    "KN-0250",
+    "KN-0257",
+    "KN-0258"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T02:37:39Z",
-  "chunks_completed": 348,
-  "publish_operations": 348
+  "updated_at": "2026-10-01T02:39:20Z",
+  "chunks_completed": 349,
+  "publish_operations": 349
 }
