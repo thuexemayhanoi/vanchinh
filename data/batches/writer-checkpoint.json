@@ -527,7 +527,9 @@
     "KN-0091",
     "KN-0092",
     "KN-0093",
-    "KN-0094"
+    "KN-0094",
+    "KN-0095",
+    "KN-0096"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -1927,11 +1929,13 @@
     "KN-0091",
     "KN-0092",
     "KN-0093",
-    "KN-0094"
+    "KN-0094",
+    "KN-0095",
+    "KN-0096"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T00:22:13Z",
-  "chunks_completed": 269,
-  "publish_operations": 269
+  "updated_at": "2026-10-01T00:23:15Z",
+  "chunks_completed": 270,
+  "publish_operations": 270
 }
