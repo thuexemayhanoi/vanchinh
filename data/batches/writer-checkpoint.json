@@ -763,7 +763,9 @@
     "KN-0327",
     "KN-0328",
     "KN-0329",
-    "KN-0330"
+    "KN-0330",
+    "KN-0331",
+    "KN-0332"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2399,11 +2401,13 @@
     "KN-0327",
     "KN-0328",
     "KN-0329",
-    "KN-0330"
+    "KN-0330",
+    "KN-0331",
+    "KN-0332"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T04:39:15Z",
-  "chunks_completed": 387,
-  "publish_operations": 387
+  "updated_at": "2026-10-01T04:45:44Z",
+  "chunks_completed": 388,
+  "publish_operations": 388
 }
