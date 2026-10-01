@@ -1,15 +1,15 @@
 {
-  "articles_scored": 1516,
+  "articles_scored": 1518,
   "average_score": 95.1,
   "min_score": 83,
   "max_score": 100,
-  "pass": 1516,
+  "pass": 1518,
   "review": 0,
   "fail": 0,
   "top_common_issues": [
     {
       "issue": "primary keyword not represented in title",
-      "count": 90
+      "count": 92
     },
     {
       "issue": "title competes with a protected commercial intent",
