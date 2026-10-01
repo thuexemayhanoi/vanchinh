@@ -608,6 +608,8 @@
     "KN-0172",
     "KN-0173",
     "KN-0174",
+    "KN-0175",
+    "KN-0176",
     "KN-0177",
     "KN-0178"
   ],
@@ -2090,12 +2092,14 @@
     "KN-0172",
     "KN-0173",
     "KN-0174",
+    "KN-0175",
+    "KN-0176",
     "KN-0177",
     "KN-0178"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-01T01:35:21Z",
-  "chunks_completed": 310,
-  "publish_operations": 310
+  "updated_at": "2026-10-01T01:36:03Z",
+  "chunks_completed": 311,
+  "publish_operations": 311
 }
