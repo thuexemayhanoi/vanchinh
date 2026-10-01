@@ -1,0 +1,22 @@
+{
+  "article_id": "KN-0246",
+  "word_count": 1553,
+  "seo_score": 83,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 15,
+    "structure": 16,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 7
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3",
+    "aim for 1600-2000 useful words",
+    "include a concise direct-answer passage or a question heading"
+  ]
+}
