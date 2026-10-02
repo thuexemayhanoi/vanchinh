@@ -3,30 +3,82 @@
   "batch": "B38",
   "mode": "new",
   "queue": [
-    "XM-0213",
-    "XM-0214"
+    "XM-0215",
+    "XM-0216",
+    "XM-0217",
+    "XM-0218",
+    "XM-0219",
+    "XM-0220"
   ],
   "pair_size": 2,
-  "started": "2026-10-02T06:53:29Z",
-  "finished": "2026-10-02T06:53:31Z",
+  "started": "2026-10-02T06:57:02Z",
+  "finished": "2026-10-02T06:57:06Z",
   "pairs": [
     {
       "pair_index": 1,
       "ids": [
-        "XM-0213",
-        "XM-0214"
+        "XM-0215",
+        "XM-0216"
       ],
       "claimed": [
-        "XM-0213",
-        "XM-0214"
+        "XM-0215",
+        "XM-0216"
       ],
       "pass": [
-        "XM-0213",
-        "XM-0214"
+        "XM-0215",
+        "XM-0216"
       ],
       "published": [
-        "XM-0213",
-        "XM-0214"
+        "XM-0215",
+        "XM-0216"
+      ],
+      "review": [],
+      "repair": [],
+      "blocked": [],
+      "publish_rc": 0,
+      "status": "published"
+    },
+    {
+      "pair_index": 2,
+      "ids": [
+        "XM-0217",
+        "XM-0218"
+      ],
+      "claimed": [
+        "XM-0217",
+        "XM-0218"
+      ],
+      "pass": [
+        "XM-0217",
+        "XM-0218"
+      ],
+      "published": [
+        "XM-0217",
+        "XM-0218"
+      ],
+      "review": [],
+      "repair": [],
+      "blocked": [],
+      "publish_rc": 0,
+      "status": "published"
+    },
+    {
+      "pair_index": 3,
+      "ids": [
+        "XM-0219",
+        "XM-0220"
+      ],
+      "claimed": [
+        "XM-0219",
+        "XM-0220"
+      ],
+      "pass": [
+        "XM-0219",
+        "XM-0220"
+      ],
+      "published": [
+        "XM-0219",
+        "XM-0220"
       ],
       "review": [],
       "repair": [],
@@ -35,11 +87,15 @@
       "status": "published"
     }
   ],
-  "published_total": 2,
+  "published_total": 6,
   "recoverable_ids": [],
   "fatal": null,
   "published_ids": [
-    "XM-0213",
-    "XM-0214"
+    "XM-0215",
+    "XM-0216",
+    "XM-0217",
+    "XM-0218",
+    "XM-0219",
+    "XM-0220"
   ]
 }
