@@ -1113,7 +1113,17 @@
     "XM-0327",
     "XM-0328",
     "XM-0329",
-    "XM-0330"
+    "XM-0330",
+    "XM-0331",
+    "XM-0332",
+    "XM-0333",
+    "XM-0334",
+    "XM-0335",
+    "XM-0336",
+    "XM-0337",
+    "XM-0338",
+    "XM-0339",
+    "XM-0340"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -3099,11 +3109,21 @@
     "XM-0327",
     "XM-0328",
     "XM-0329",
-    "XM-0330"
+    "XM-0330",
+    "XM-0331",
+    "XM-0332",
+    "XM-0333",
+    "XM-0334",
+    "XM-0335",
+    "XM-0336",
+    "XM-0337",
+    "XM-0338",
+    "XM-0339",
+    "XM-0340"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-02T08:56:22Z",
-  "chunks_completed": 562,
-  "publish_operations": 562
+  "updated_at": "2026-10-02T09:02:59Z",
+  "chunks_completed": 567,
+  "publish_operations": 567
 }
