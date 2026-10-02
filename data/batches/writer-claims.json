@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "updated_at": "2026-10-02T00:17:33.284Z",
+  "updated_at": "2026-10-02T00:17:40.022Z",
   "leases": {
     "mistral-writer-2": {
       "ids": [
@@ -47,10 +47,10 @@
         "XM-0337",
         "XM-0338",
         "XM-0339",
-        "XM-03310"
+        "XM-0340"
       ],
-      "claimed_at": "2026-10-02T00:17:33.284Z",
-      "expires_at": "2026-10-04T00:17:33.284Z",
+      "claimed_at": "2026-10-02T00:10:44.635Z",
+      "expires_at": "2026-10-04T00:10:44.635Z",
       "batch": "B40"
     },
     "mistral-writer-5": {
