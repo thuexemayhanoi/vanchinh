@@ -1,0 +1,18 @@
+{
+  "article_id": "XM-0239",
+  "word_count": 1647,
+  "seo_score": 95,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": []
+}
