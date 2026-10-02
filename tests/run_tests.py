@@ -565,6 +565,12 @@ def test_factory_liveness():
     orig = list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))
     pub_rows = [r for r in orig if r["status"] == "PUBLISHED"][:2]
     planned_rows = [r for r in orig if r["status"] == "PLANNED"][:2]
+    if not planned_rows:
+        # End-state repository (all rows PUBLISHED): synthesize PLANNED
+        # fixture rows from published rows so the PLANNED-based liveness
+        # scenarios stay exercisable after the project is complete.
+        planned_rows = pub_rows[:2]
+    planned_map = {r["article_id"]: "PLANNED" for r in planned_rows}
     with tempfile.TemporaryDirectory() as td:
         tdp = pathlib.Path(td)
         m = tdp / "m.csv"
@@ -682,7 +688,7 @@ def test_factory_liveness():
         txn.unlink()
 
         # --- stale lock with unfinished work => FAIL -------------------------
-        write_matrix()  # PLANNED rows exist
+        write_matrix(planned_map)  # PLANNED rows exist
         write_checkpoint(iso(0.5))
         lock.write_text(json.dumps({"operator": "gone", "acquired": iso(10)}),
                         encoding="utf-8")
@@ -706,7 +712,7 @@ def test_factory_liveness():
         clean()
 
         # --- stale checkpoint: chunk ids unknown / still PLANNED ------------
-        write_matrix()
+        write_matrix(planned_map)
         write_checkpoint(iso(0.5), chunk_ids=[planned_rows[0]["article_id"],
                                               "ZZ-9999"])
         r = run_liveness()
@@ -1329,13 +1335,18 @@ def test_driver_fail_closed():
         shutil.copyfile(orig_matrix, fc.MATRIX)
         ok = {n: {"returncode": 0, "stdout_tail": "", "stderr_tail": ""}
               for n, _ in drv.VALIDATION_CMDS}
-        # --- in-process gate: all validators PASS => CONTINUE allowed ------
+        # --- in-process gate: all validators PASS => normal verdict ---------
+        # Verdict follows matrix truth: CONTINUE while unfinished work
+        # remains, COMPLETE at end-state (all rows published).
         rc, out = gate_out("run", {k: dict(v) for k, v in ok.items()})
         j = json.loads(out.split("VANCHINH_FACTORY")[0])
-        check("gate: all validators PASS => rc 0 CONTINUE verdict",
-              rc == 0 and j["status"] == "CONTINUE", f"rc={rc} {out[-200:]}")
-        check("gate: all validators PASS prints CONTINUING marker",
-              "VANCHINH_FACTORY_CONTINUING" in out, out[-120:])
+        marker = ("VANCHINH_FACTORY_CONTINUING" if j["status"] == "CONTINUE"
+                  else "VANCHINH_FACTORY_COMPLETE")
+        check("gate: all validators PASS => rc 0 CONTINUE/COMPLETE verdict",
+              rc == 0 and j["status"] in ("CONTINUE", "COMPLETE"),
+              f"rc={rc} {out[-200:]}")
+        check("gate: all validators PASS prints verdict marker",
+              marker in out, out[-120:])
         check("gate: all validators PASS has no BLOCKED marker",
               "VANCHINH_FACTORY_BLOCKED" not in out)
         # --- in-process gate: each single validator FAIL => BLOCKED ---------
@@ -1411,15 +1422,20 @@ def test_driver_fail_closed():
         check("driver validate: matrix FAIL names matrix validator",
               "matrix" in j["failed_validators"], str(j.get("failed_validators")))
 
-        # site validator FAIL: PLANNED row flipped PUBLISHED (sitemap/hub drift)
-        flip_id = next(x["article_id"] for x in
-                       csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))
-                       if x["status"] == "PLANNED")
+        # site validator FAIL: row status disagrees with sitemap/hub truth.
+        # Pre-completion: flip a PLANNED row to PUBLISHED (file absent from
+        # sitemap => "sitemap missing PUBLISHED article"). End-state repo
+        # (all rows PUBLISHED): flip a PUBLISHED row to PLANNED (file present
+        # in sitemap => "sitemap contains non-published article").
+        _rows = list(csv.DictReader(open(orig_matrix, encoding="utf-8", newline="")))
+        _planned = [x for x in _rows if x["status"] == "PLANNED"]
+        flip_id = _planned[0]["article_id"] if _planned else _rows[0]["article_id"]
+        flip_to = "PUBLISHED" if _planned else "PLANNED"
 
         def flip_published(rows):
             for x in rows:
                 if x["article_id"] == flip_id:
-                    x["status"] = "PUBLISHED"
+                    x["status"] = flip_to
         sandbox(flip_published)
         r = run_validate()
         j = json.loads(r.stdout.split("VANCHINH_FACTORY")[0])
