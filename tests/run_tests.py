@@ -1794,6 +1794,150 @@ def test_writer_claim():
           orig_matrix.read_bytes() == before_bytes)
 
 
+def test_writer_claim_prune():
+    """ACTIVE-BATCH ONLY lease validity (owner rule):
+    (1) prune drops leases with ids outside the active batch (stale batch);
+    (2) prune drops ids that are no longer PLANNED of the active batch
+        (e.g. factory published them) and removes emptied writers;
+    (3) prune drops TTL-expired leases (incl. fractional-second timestamps);
+    (4) prune caps the registry at 3 writers - newest claims win;
+    (5) claim/show auto-prune the registry (self-heal);
+    (6) merge rejects incoming ids that are not active-batch PLANNED."""
+    orig_matrix = fc.MATRIX
+    orig_checkpoint = fc.CHECKPOINT
+    before_bytes = orig_matrix.read_bytes()
+    import writer_claim as wc  # noqa: E402
+    orig_registry = wc.REGISTRY
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        fc.MATRIX = tdp / "m.csv"
+        fc.CHECKPOINT = tdp / "writer-checkpoint.json"
+        wc.REGISTRY = tdp / "writer-claims.json"
+        orig_rows = [dict(r) for r in csv.DictReader(open(orig_matrix, encoding="utf-8", newline=""))]
+        rows = [dict(r) for r in orig_rows]
+        # AT-0001..0048 PLANNED (active batch); AT-0049 PUBLISHED in the
+        # active batch for case (2); everything else published
+        for x in rows:
+            if x["article_id"] in [f"AT-{i:04d}" for i in range(1, 49)]:
+                x["status"] = "PLANNED"
+            else:
+                x["status"] = "PUBLISHED"
+        with fc.MATRIX.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fc.MATRIX_FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+        from factory_push_selection import active_batch  # noqa: E402
+        batch = active_batch(rows)
+        check("prune fixture: active batch is the AT batch",
+              batch == rows[0]["batch_id"], f"{batch} vs {rows[0]['batch_id']}")
+        at_ids = [f"AT-{i:04d}" for i in range(1, 49)]
+        try:
+            reg = wc.load_registry()
+            reg["leases"] = {
+                "W_STALE": {"ids": ["CD-0001", "XM-0001"],
+                            "claimed_at": "2026-01-01T00:00:00Z",
+                            "expires_at": "2099-01-01T00:00:00Z",
+                            "batch": "B99"},
+                "W_PUBLISHED": {"ids": ["AT-0049"],
+                                "claimed_at": "2026-01-02T00:00:00Z",
+                                "expires_at": "2099-01-01T00:00:00Z",
+                                "batch": batch},
+                "W_EXPIRED": {"ids": [at_ids[0]],
+                              "claimed_at": "2026-01-03T00:00:00Z",
+                              "expires_at": "2026-01-04T00:00:00Z",
+                              "batch": batch},
+                "W_KEEP": {"ids": [at_ids[1], at_ids[2]],
+                           "claimed_at": "2026-01-05T00:00:00Z",
+                           "expires_at": "2099-01-01T00:00:00Z",
+                           "batch": batch},
+            }
+            wc.save_registry(reg)
+            # --- (3) fractional-second timestamps parse as live ------------
+            check("prune: fractional-second epoch parses",
+                  wc._epoch_of("2026-10-01T23:26:12.061Z") > 0,
+                  str(wc._epoch_of("2026-10-01T23:26:12.061Z")))
+            # --- (1)(2)(3) one-shot prune ----------------------------------
+            rc = capture_stdout(lambda: wc.cmd_prune())
+            reg = wc.load_registry()
+            check("prune: cmd_prune exits 0", rc == 0, str(rc))
+            check("prune: stale-batch lease dropped",
+                  "W_STALE" not in reg["leases"],
+                  json.dumps(reg["leases"], ensure_ascii=False))
+            check("prune: no-longer-PLANNED id dropped, writer removed",
+                  "W_PUBLISHED" not in reg["leases"],
+                  json.dumps(reg["leases"], ensure_ascii=False))
+            check("prune: expired lease dropped",
+                  "W_EXPIRED" not in reg["leases"],
+                  json.dumps(reg["leases"], ensure_ascii=False))
+            check("prune: valid active-batch lease kept intact",
+                  reg["leases"].get("W_KEEP", {}).get("ids") == [at_ids[1], at_ids[2]],
+                  str(reg["leases"].get("W_KEEP")))
+            # --- (4) registry capped at 3 writers, newest wins -------------
+            reg["leases"] = {
+                "W_OLD": {"ids": [at_ids[10]],
+                          "claimed_at": "2026-02-01T00:00:00Z",
+                          "expires_at": "2099-01-01T00:00:00Z", "batch": batch},
+                "W_MID": {"ids": [at_ids[11]],
+                          "claimed_at": "2026-02-02T00:00:00Z",
+                          "expires_at": "2099-01-01T00:00:00Z", "batch": batch},
+                "W_NEW": {"ids": [at_ids[12]],
+                          "claimed_at": "2026-02-03T00:00:00Z",
+                          "expires_at": "2099-01-01T00:00:00Z", "batch": batch},
+                "W_NEWEST": {"ids": [at_ids[13]],
+                             "claimed_at": "2026-02-04T00:00:00Z",
+                             "expires_at": "2099-01-01T00:00:00Z", "batch": batch},
+            }
+            wc.save_registry(reg)
+            report = wc.prune_registry(reg, rows, batch)
+            check("prune: registry capped at 3 writers",
+                  len(reg["leases"]) == 3 and "W_OLD" not in reg["leases"],
+                  json.dumps(sorted(reg["leases"])))
+            check("prune: cap keeps the 3 newest writers",
+                  set(reg["leases"]) == {"W_MID", "W_NEW", "W_NEWEST"},
+                  json.dumps(sorted(reg["leases"])))
+            check("prune: cap reports the dropped writer",
+                  report["capped"] == ["W_OLD"], str(report["capped"]))
+            wc.save_registry(reg)
+            # --- (5) claim/show self-heal ---------------------------------
+            reg["leases"]["W_STALE2"] = {"ids": ["HD-0001"],
+                                         "claimed_at": "2026-03-01T00:00:00Z",
+                                         "expires_at": "2099-01-01T00:00:00Z",
+                                         "batch": "B98"}
+            wc.save_registry(reg)
+            rc = capture_stdout(lambda: wc.cmd_show())
+            reg2 = wc.load_registry()
+            check("prune: show auto-prunes stale lease",
+                  rc == 0 and "W_STALE2" not in reg2["leases"],
+                  json.dumps(sorted(reg2["leases"])))
+            rc = capture_stdout(lambda: wc.cmd_claim("W_NEWEST", ids=[at_ids[14]]))
+            reg3 = wc.load_registry()
+            check("prune: claim auto-prunes and still claims",
+                  rc == 0 and at_ids[14] in reg3["leases"]["W_NEWEST"]["ids"],
+                  json.dumps(reg3.get("leases", {}).get("W_NEWEST"), ensure_ascii=False))
+            # --- (6) merge rejects non-active-batch incoming ids ---------
+            remote = {"schema_version": "1", "leases": {
+                "W_MERGE": {"ids": ["HD-0001", at_ids[20]],
+                            "claimed_at": "2026-02-05T00:00:01Z",
+                            "expires_at": "2099-01-01T00:00:00Z",
+                            "batch": "B98"}}}
+            remote_file = tdp / "remote-claims.json"
+            remote_file.write_text(json.dumps(remote), encoding="utf-8")
+            rc = capture_stdout(lambda: wc.cmd_merge(str(remote_file)))
+            reg4 = wc.load_registry()
+            check("prune: merge keeps active-batch id",
+                  rc == 0 and at_ids[20] in reg4["leases"]["W_MERGE"]["ids"],
+                  json.dumps(reg4["leases"].get("W_MERGE"), ensure_ascii=False))
+            check("prune: merge rejects non-active-batch id",
+                  "HD-0001" not in reg4["leases"]["W_MERGE"]["ids"],
+                  json.dumps(reg4["leases"].get("W_MERGE"), ensure_ascii=False))
+        finally:
+            fc.MATRIX = orig_matrix
+            fc.CHECKPOINT = orig_checkpoint
+            wc.REGISTRY = orig_registry
+    check("production matrix untouched by prune tests",
+          orig_matrix.read_bytes() == before_bytes)
+
+
 def capture_stdout(fn):
     """Run fn with stdout swallowed; return fn's return value (tests only
     assert rc, the command output is noise here)."""
@@ -1980,6 +2124,7 @@ def main():
     test_driver_fail_closed()
     test_push_selection_and_repair()
     test_writer_claim()
+    test_writer_claim_prune()
     test_factory_queue()
     test_seo_scorer()
     test_support_no_zalo()

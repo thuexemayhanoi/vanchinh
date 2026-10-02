@@ -53,13 +53,15 @@ Dừng tạm do rate-limit/ lỗi connector tạm thời KHÔNG PHẢI quyền r
 Mục tiêu: 3 writer → mỗi writer buffer tối đa 10 bài → push → 1 factory queue → 2+2+2+2+2.
 
 - Lease registry: `data/batches/writer-claims.json` (env `WRITER_CLAIMS`). Writer commit + push registry này; path nằm ngoài paths filter của `factory-publish.yml` nên KHÔNG kích hoạt production run.
-- `python3 scripts/writer_claim.py claim --writer W1 [--count N|--ids A,B]`: lease N row PLANNED của active batch theo thứ tự matrix, trừ các ID đang bị lease sống của writer khác. Cap 10 ID sống/writer; tối đa 3 writer; TTL 48h (lease hết hạn tự động được reclaim).
+- `python3 scripts/writer_claim.py claim --writer W1 [--count N|--ids A,B]`: lease N row PLANNED của ACTIVE batch (batch chưa terminal đầu tiên theo thứ tự matrix) — KHÔNG BAO GIỜ claim batch tương lai. Trừ các ID đang bị lease sống của writer khác. Cap 10 ID sống/writer; tối đa 3 writer; TTL 48h.
 - `python3 scripts/writer_claim.py release --writer W1 --ids A,B`: bỏ lease (chạy sau khi factory publish xong ID đó, hoặc khi bỏ bài).
-- `python3 scripts/writer_claim.py show`: trạng thái registry + các ID PLANNED còn tự do.
-- `python3 scripts/writer_claim.py merge --file registry.json`: gộp registry từ remote vào local khi push registry thua race (non-fast-forward). Xung đột ID: claimed_at sớm hơn thắng (thứ bậc phụ: tên writer nhỏ hơn); writer thua giữ các ID còn lại và claim bù sau. KHÔNG BAO GIỜ force push registry.
+- `python3 scripts/writer_claim.py show`: trạng thái registry + các ID PLANNED còn tự do (tự prune trước khi báo cáo).
+- `python3 scripts/writer_claim.py prune`: rà soát hiệu lực lease NGAY BÂY GIỜ theo đúng thứ tự: (a) lease hết TTL bị drop; (b) ID không còn là row PLANNED của active batch (batch khác / đã publish / blocked) bị drop; (c) writer hết ID hợp lệ bị xóa; (d) registry vượt 3 writer → giữ 3 claim mới nhất. Prune cũng tự chạy trong mọi lệnh claim/release/show/merge (self-heal, persist khi có thay đổi).
+- `python3 scripts/writer_claim.py merge --file registry.json`: gộp registry từ remote vào local khi push registry thua race (non-fast-forward). ID incoming phải là PLANNED của active batch — ID lạ/batch khác bị từ chối. Xung đột ID: claimed_at sớm hơn thắng (thứ bậc phụ: tên writer nhỏ hơn); writer thua giữ các ID còn lại và claim bù sau. KHÔNG BAO GIỜ force push registry.
 - Giao thức push race: fetch fresh main → `merge` registry remote → claim lại phần còn tự do → push lại. Ép push registry bị từ chối là vi phạm contract.
 - Một writer push tối đa 10 file bài mới (queue contract); queue bị từ chối (refuse) thì sửa theo lý do refuse rồi push lại, KHÔNG chia nhỏ bằng cách sửa workflow.
 - Bài trong buffer không còn khớp repository truth (ID đã PUBLISHED / đổi batch / repair) → revalidate từ matrix mới trước khi push; tuyệt đối không ép push.
+- Factory REFUSE vì batch đổi hoặc lease stale → release lease sai batch (`prune`), fetch fresh main, claim lại từ active batch MỚI; KHÔNG viết batch tương lai chờ factory. Queue 2..10 và nhịp factory 2+2+2+2+2 giữ nguyên.
 
 ## Quy tắc an toàn mỗi vòng
 

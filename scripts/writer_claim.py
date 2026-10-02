@@ -2,13 +2,22 @@
 # -*- coding: utf-8 -*-
 """writer_claim.py - MULTI-WRITER lease registry for the write-ahead queue.
 
-Contract (TURBO MULTI-WRITER):
+Contract (TURBO MULTI-WRITER, ACTIVE-BATCH ONLY):
   - up to 3 independent writers prepare articles in parallel and NEVER
     collide on article IDs;
-  - a writer leases up to MAX_LEASE (10) PLANNED rows of the active batch,
-    in deterministic matrix order, skipping rows already covered by a LIVE
-    lease from another writer;
+  - a writer leases up to MAX_LEASE (10) PLANNED rows of the ACTIVE batch
+    (first non-terminal batch in matrix order) - NEVER a future batch;
   - leases expire after TTL_HOURS (48h) and are reclaimed automatically;
+  - the registry SELF-HEALS on every command via prune_registry():
+      (a) TTL-expired leases are dropped;
+      (b) lease ids that are no longer PLANNED rows of the ACTIVE batch
+          (stale batch, already published, blocked) are dropped;
+      (c) writers left with no valid ids are removed;
+      (d) the registry is capped at MAX_WRITERS (newest claims win);
+  - when factory-publish REFUSES a push because the active batch moved or
+    a lease went stale: release the wrong-batch lease (prune), fetch fresh
+    main, and re-claim from the NEW active batch - never write future
+    batches ahead of the factory;
   - the registry lives at data/batches/writer-claims.json (env WRITER_CLAIMS)
     and is committed/pushed by the writers themselves. That path is NOT in
     the factory workflow paths filter, so registry pushes never trigger a
@@ -18,13 +27,18 @@ Contract (TURBO MULTI-WRITER):
     is still free, and push again (never force-push).
 
 Commands:
-  claim   --writer W [--count N|--ids A,B]  lease N free PLANNED rows (or
-                                           exactly --ids when still free)
+  claim   --writer W [--count N|--ids A,B]  lease N free PLANNED rows of the
+                                           active batch (or exactly --ids
+                                           when still free)
   release --writer W --ids A,B              drop leases (e.g. after push)
   show                                      print the registry + free rows
+                                           (auto-prunes first)
+  prune                                     enforce lease validity NOW and
+                                           report what was dropped
   merge   --file registry.json              merge a remote registry copy
                                            into the local one (earlier
-                                           claim wins on conflicts)
+                                           claim wins on conflicts; incoming
+                                           ids must be active-batch PLANNED)
 
 Exit codes: 0 ok, 1 error (nothing mutated on error).
 """
@@ -32,6 +46,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -50,8 +65,14 @@ def _now():
 
 
 def _epoch_of(iso):
+    """Epoch seconds of an ISO timestamp; tolerates fractional seconds
+    (e.g. 2026-10-01T23:26:12.061Z). Corrupt timestamps are treated as
+    dead (0.0) so stale entries never survive on bad data."""
+    if not iso:
+        return 0.0
+    base = re.sub(r"\.\d+Z$", "Z", iso)
     try:
-        return time.mktime(time.strptime(iso, "%Y-%m-%dT%H:%M:%SZ"))
+        return time.mktime(time.strptime(base, "%Y-%m-%dT%H:%M:%SZ"))
     except Exception:  # noqa: BLE001 - corrupt timestamps are treated as dead
         return 0.0
 
@@ -98,6 +119,75 @@ def _prune_expired(reg, now=None):
     return len(dead)
 
 
+def prune_registry(reg, rows, batch, now=None):
+    """Enforce lease validity IN PLACE (ACTIVE-BATCH ONLY contract).
+
+    Order (owner rule): (a) TTL-expired leases are dropped; (b) lease ids
+    that are no longer PLANNED rows of the ACTIVE batch are dropped (stale
+    batch / published / blocked / unknown); (c) writers left with no valid
+    ids are removed; (d) the registry is capped at MAX_WRITERS - when more
+    than MAX_WRITERS valid writers remain, the NEWEST claims win and the
+    oldest are dropped. Returns a report dict (never raises)."""
+    now = now if now is not None else time.time()
+    report = {"active_batch": batch, "expired": [], "invalid_ids": {},
+              "removed_writers": [], "capped": [], "kept": {}}
+    # (a) TTL expiry
+    for w in [w for w, l in reg["leases"].items()
+              if _epoch_of(l.get("expires_at", "")) < now]:
+        del reg["leases"][w]
+        report["expired"].append(w)
+    # (b) ids must be PLANNED rows of the active batch
+    if batch is not None:
+        valid = {r["article_id"] for r in rows
+                 if r["batch_id"] == batch and r["status"] == "PLANNED"}
+        for w in list(reg["leases"].keys()):
+            lease = reg["leases"][w]
+            keep = [a for a in lease.get("ids", []) if a in valid]
+            dropped = [a for a in lease.get("ids", []) if a not in set(keep)]
+            if dropped:
+                report["invalid_ids"][w] = dropped
+            if keep:
+                lease["ids"] = keep
+            else:
+                del reg["leases"][w]
+                report["removed_writers"].append(w)
+    # (c) is implicit: writers with zero valid ids were removed in (b)
+    # (d) cap at MAX_WRITERS: newest claimed_at wins (tie: smaller name)
+    if len(reg["leases"]) > MAX_WRITERS:
+        by_age = sorted(reg["leases"].items(),
+                        key=lambda kv: (_epoch_of(kv[1].get("claimed_at") or ""),
+                                        kv[0]))
+        for w, _ in by_age[:-MAX_WRITERS]:
+            del reg["leases"][w]
+            report["capped"].append(w)
+    report["kept"] = {w: list(l["ids"]) for w, l in reg["leases"].items()}
+    return report
+
+
+def cmd_prune():
+    """One-shot validity sweep: prune the registry against fresh repo truth
+    and persist the result."""
+    reg = load_registry()
+    rows = fc.load_matrix()
+    batch = active_batch(rows)
+    report = prune_registry(reg, rows, batch)
+    save_registry(reg)
+    print("VANCHINH_WRITER_PRUNE " + json.dumps(
+        {"report": report, "registry": str(REGISTRY)}, ensure_ascii=False,
+        indent=2))
+    return 0
+
+
+def _selfheal(reg, rows, batch, now=None):
+    """Run prune_registry and PERSIST the result when anything was dropped
+    (registry self-heal on every command; a no-op prune writes nothing)."""
+    report = prune_registry(reg, rows, batch, now)
+    if (report["expired"] or report["invalid_ids"]
+            or report["removed_writers"] or report["capped"]):
+        save_registry(reg)
+    return report
+
+
 def _free_planned(rows, batch):
     """PLANNED rows of the active batch, deterministic matrix order."""
     return [r for r in rows if r["batch_id"] == batch and r["status"] == "PLANNED"]
@@ -110,9 +200,9 @@ def _expires_at(now=None):
 
 def cmd_claim(writer, count=None, ids=None, now=None):
     reg = load_registry()
-    _prune_expired(reg, now)
     rows = fc.load_matrix()
     batch = active_batch(rows)
+    _selfheal(reg, rows, batch, now)  # self-heal BEFORE claiming
     if batch is None:
         print(json.dumps({"error": "factory complete: no active batch", "writer": writer}))
         return 1
@@ -171,6 +261,9 @@ def cmd_claim(writer, count=None, ids=None, now=None):
 
 def cmd_release(writer, ids):
     reg = load_registry()
+    rows = fc.load_matrix()
+    batch = active_batch(rows)
+    _selfheal(reg, rows, batch)  # self-heal BEFORE releasing
     mine = reg["leases"].get(writer)
     if not mine:
         print(json.dumps({"writer": writer, "released": [], "leased_total": []}))
@@ -188,9 +281,9 @@ def cmd_release(writer, ids):
 
 def cmd_show():
     reg = load_registry()
-    _prune_expired(reg)
     rows = fc.load_matrix()
     batch = active_batch(rows)
+    _selfheal(reg, rows, batch)  # self-heal BEFORE reporting
     live = _live_leases(reg)
     planned = _free_planned(rows, batch) if batch else []
     taken = set(live)
@@ -211,12 +304,22 @@ def cmd_merge(path):
     so it can claim replacements. Never force-overrides; result is saved."""
     other = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
     reg = load_registry()
-    _prune_expired(reg)
-    conflicts, lost = [], []
+    rows = fc.load_matrix()
+    batch = active_batch(rows)
+    prune_registry(reg, rows, batch)  # self-heal BEFORE merging
+    valid = ({r["article_id"] for r in rows
+              if r["batch_id"] == batch and r["status"] == "PLANNED"}
+             if batch is not None else set())
+    conflicts, lost, invalid = [], [], []
     for w, l in other.get("leases", {}).items():
         incoming = list(l.get("ids", []))
         keep = []
         for a in incoming:
+            if batch is not None and a not in valid:
+                # ACTIVE-BATCH ONLY: a stale/foreign id never enters the
+                # local registry through merge
+                invalid.append({"id": a, "writer": w})
+                continue
             holder = next(((ow, ol) for ow, ol in reg["leases"].items()
                            if ow != w and a in ol["ids"]), None)
             if holder is None:
@@ -240,8 +343,10 @@ def cmd_merge(path):
             lease["expires_at"] = l.get("expires_at")
             lease["batch"] = l.get("batch")
             reg["leases"][w] = lease
+    prune_registry(reg, rows, batch)  # cap + validity AFTER merge too
     save_registry(reg)
     print(json.dumps({"merged": True, "conflicts": conflicts,
+                      "rejected_not_active_batch_planned": invalid,
                       "lost_to_other_writer": lost,
                       "writers": {w: l["ids"] for w, l in reg["leases"].items()}},
                      ensure_ascii=False, indent=2))
@@ -260,6 +365,7 @@ def main():
     r.add_argument("--writer", required=True)
     r.add_argument("--ids", required=True)
     sub.add_parser("show")
+    sub.add_parser("prune")
     m = sub.add_parser("merge")
     m.add_argument("--file", required=True, help="remote registry JSON copy")
     args = ap.parse_args()
@@ -270,6 +376,8 @@ def main():
         return cmd_release(args.writer, [v.strip() for v in args.ids.split(",") if v.strip()])
     if args.command == "show":
         return cmd_show()
+    if args.command == "prune":
+        return cmd_prune()
     if args.command == "merge":
         return cmd_merge(args.file)
     return 2
