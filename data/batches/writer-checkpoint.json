@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "batch": "B38",
+  "batch": "B39",
   "chunk_size": 2,
   "current_chunk_ids": [],
   "written_ids": [
@@ -1033,7 +1033,17 @@
     "XM-0247",
     "XM-0248",
     "XM-0249",
-    "XM-0250"
+    "XM-0250",
+    "XM-0251",
+    "XM-0252",
+    "XM-0253",
+    "XM-0254",
+    "XM-0255",
+    "XM-0256",
+    "XM-0257",
+    "XM-0258",
+    "XM-0259",
+    "XM-0260"
   ],
   "pending_qa_ids": [],
   "pending_repair_ids": [],
@@ -2939,11 +2949,21 @@
     "XM-0247",
     "XM-0248",
     "XM-0249",
-    "XM-0250"
+    "XM-0250",
+    "XM-0251",
+    "XM-0252",
+    "XM-0253",
+    "XM-0254",
+    "XM-0255",
+    "XM-0256",
+    "XM-0257",
+    "XM-0258",
+    "XM-0259",
+    "XM-0260"
   ],
   "last_completed_step": "publish",
   "started_at": "2026-09-27T02:08:31Z",
-  "updated_at": "2026-10-02T08:12:55Z",
-  "chunks_completed": 522,
-  "publish_operations": 522
+  "updated_at": "2026-10-02T08:18:41Z",
+  "chunks_completed": 527,
+  "publish_operations": 527
 }
