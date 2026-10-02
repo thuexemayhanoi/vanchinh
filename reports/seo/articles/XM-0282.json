@@ -1,0 +1,20 @@
+{
+  "article_id": "XM-0282",
+  "word_count": 1624,
+  "seo_score": 88,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 13,
+    "structure": 20,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": [
+    "reflect the primary topic in at least one H2/H3"
+  ]
+}
