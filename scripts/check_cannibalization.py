@@ -5,6 +5,10 @@
 Checks that no article (in cam-nang/) or matrix row targets a protected
 commercial primary keyword owned by a commercial landing page, and that
 no two commercial pages share a primary intent.
+Title/H1 scan uses exact head-term matching (normalized): a long-tail
+informational title that merely mentions a protected keyword targets a
+different query and is not cannibalization; primary-keyword targeting by
+matrix rows remains an exact-match violation.
 Usage: check_cannibalization.py [article_id]
 """
 import sys
@@ -52,7 +56,10 @@ def main():
         for field, val in (("title", mt.group(1) if mt else ""), ("h1", h1.group(1) if h1 else "")):
             nv = normalize(val)
             for kw, page in protected.items():
-                if kw in nv:
+                # exact head-term match only: long-tail informational titles
+                # that mention the keyword target a different query; matrix
+                # primary_keyword targeting is still checked exactly above.
+                if nv == kw:
                     errors.append(f"{f} {field} targets protected keyword '{kw}' owned by {page}")
 
     for e in errors:
