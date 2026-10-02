@@ -1,0 +1,20 @@
+{
+  "article_id": "XM-0221",
+  "word_count": 1562,
+  "seo_score": 93,
+  "seo_status": "PASS",
+  "sections": {
+    "technical": 20,
+    "intent": 20,
+    "structure": 18,
+    "internal_links": 15,
+    "schema": 10,
+    "ai_geo": 10
+  },
+  "issues": [
+    "primary keyword not represented in title"
+  ],
+  "recommendations": [
+    "aim for 1600-2000 useful words"
+  ]
+}
